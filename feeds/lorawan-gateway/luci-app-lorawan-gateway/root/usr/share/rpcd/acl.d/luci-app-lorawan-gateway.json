@@ -1,0 +1,30 @@
+{
+	"luci-app-lorawan-gateway": {
+		"description": "Grant UCI access for luci-app-lorawan-gateway",
+		"read": {
+			"file": {
+				"/tmp/lora-gateway/log": [
+					"read"
+				]
+			},
+			"ubus": {
+				"luci": [
+					"setInitAction"
+				]
+			},
+			"uci": [
+				"lorawan-gateway"
+			]
+		},
+		"write": {
+			"ubus": {
+				"luci": [
+					"setInitAction"
+				]
+			},
+			"uci": [
+				"lorawan-gateway"
+			]
+		}
+	}
+}
