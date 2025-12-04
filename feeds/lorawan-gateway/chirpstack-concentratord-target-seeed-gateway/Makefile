@@ -1,11 +1,11 @@
 include $(TOPDIR)/rules.mk
 
-PKG_NAME:=chirpstack-concentratord-target-seeed-ga a te wa y |
+PKG_NAME:=chirpstack-concentratord-target-seeed-gateway
 PKG_RELEASE:=1
 
 include $(INCLUDE_DIR)/package.mk
 
-define Package/chirpstack-concentratord-target-seeed-gaateway
+define Package/chirpstack-concentratord-target-seeed-gateway
 	SECTION:=chirpstack
 	CATEGORY:=ChirpStack
 	TITLE:=ChirpStack Concentratord (Seeed SenseCAP M2)
@@ -13,15 +13,15 @@ define Package/chirpstack-concentratord-target-seeed-gaateway
 	DEPENDS:=+chirpstack-concentratord-sx1302
 endef
 
-define Package/chirpstack-concentratord-target-seeed-gaateway/description
-	ChirpStack Concentratord (seeed-gaateway)
+define Package/chirpstack-concentratord-target-seeed-gateway/description
+	ChirpStack Concentratord (seeed-gateway)
 endef
 
-define Package/chirpstack-concentratord-target-seeed-gaateway/conffiles
+define Package/chirpstack-concentratord-target-seeed-gateway/conffiles
 	/etc/config/chirpstack-concentratord
 endef
 
-define Package/chirpstack-concentratord-target-seeed-gaateway/install
+define Package/chirpstack-concentratord-target-seeed-gateway/install
 	$(INSTALL_DIR) $(1)/etc/config
 	$(INSTALL_CONF) ./files/chirpstack-concentratord.config $(1)/etc/config/chirpstack-concentratord
 
@@ -33,4 +33,4 @@ define Build/Compile
 	# Nothing to do
 endef
 
-$(eval $(call BuildPackage,chirpstack-concentratord-target-seeed-gaateway))
+$(eval $(call BuildPackage,chirpstack-concentratord-target-seeed-gateway))
