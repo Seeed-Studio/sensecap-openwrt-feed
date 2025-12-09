@@ -29,6 +29,7 @@ struct MqttConfig {
     keepalive: u64,
     uplink_topic: String,
     downlink_topic: String,
+    qos_level: u8,
     reconnect_delay: u64,
 }
 
@@ -136,6 +137,10 @@ fn load_config_from_uci() -> Result<Config, Box<dyn std::error::Error + Send + S
         .unwrap_or(30);
     let uplink_topic = uci_get("lorawan-gateway", "mqtt", "uplink_topic").unwrap_or_else(|_| "rs485/uplink".to_string());
     let downlink_topic = uci_get("lorawan-gateway", "mqtt", "downlink_topic").unwrap_or_else(|_| "rs485/downlink".to_string());
+    let qos_level = uci_get("lorawan-gateway", "mqtt", "qos")
+        .ok()
+        .and_then(|s| s.parse::<u8>().ok())
+        .unwrap_or(0);
     let reconnect_delay = uci_get("lorawan-gateway", "mqtt", "reconnect_delay")
         .ok()
         .and_then(|s| s.parse().ok())
@@ -151,6 +156,7 @@ fn load_config_from_uci() -> Result<Config, Box<dyn std::error::Error + Send + S
         keepalive,
         uplink_topic,
         downlink_topic,
+        qos_level,
         reconnect_delay,
     };
 
@@ -282,6 +288,12 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut mqtt_client: Option<AsyncClient> = None;                // MQTT client
     let mut mqtt_eventloop: Option<rumqttc::EventLoop> = None;      // MQTT event loop
     let mut mqtt_state = "not_connect";                             // MQTT connection state   
+    let mqtt_qos = match config.mqtt.qos_level {
+        0 => QoS::AtMostOnce,
+        1 => QoS::AtLeastOnce,
+        2 => QoS::ExactlyOnce,
+        _ => QoS::AtLeastOnce, 
+    };
 
     loop {
             // Reload configuration
@@ -327,7 +339,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                                         Incoming::ConnAck(_) => {
                                             // Subscribe to downlink topic
                                             if let Some(ref client) = mqtt_client {
-                                                match client.subscribe(&config.mqtt.downlink_topic, QoS::AtMostOnce).await {
+                                                match client.subscribe(&config.mqtt.downlink_topic, mqtt_qos).await {
                                                     Ok(_) => {
                                                         logger.log(&format!("Subscribed to topic: {}", config.mqtt.downlink_topic));
                                                     }
@@ -394,7 +406,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                                         let uplink_msg = UplinkMessage { data: data_str.clone() };
                                         match serde_json::to_string(&uplink_msg) {
                                             Ok(json) => {
-                                                match client.publish(&config.mqtt.uplink_topic, QoS::AtLeastOnce, false, json.as_bytes()).await {
+                                                match client.publish(&config.mqtt.uplink_topic, mqtt_qos, false, json.as_bytes()).await {
                                                     Ok(_) => {
                                                         logger.log(&format!("Published to MQTT: {}", data_str));
                                                     }
