@@ -163,18 +163,18 @@ fn load_config_from_uci() -> Result<Config, Box<dyn std::error::Error + Send + S
     // Serial config
     let device = format!(
         "/dev/{}",
-        uci_get("lorawan-gateway", "serial", "device").unwrap_or_else(|_| "ttyAMA2".to_string())
+        uci_get("lorawan-gateway", "mqtt", "device").unwrap_or_else(|_| "ttyAMA2".to_string())
     );
-    let baudrate = uci_get("lorawan-gateway", "serial", "baudrate")
+    let baudrate = uci_get("lorawan-gateway", "mqtt", "baudrate")
         .ok()
         .and_then(|s| s.parse().ok())
         .unwrap_or(9600);
-    let databit = uci_get("lorawan-gateway", "serial", "databit")
+    let databit = uci_get("lorawan-gateway", "mqtt", "databit")
         .ok()
         .and_then(|s| s.parse().ok())
         .unwrap_or(8);
-    let stopbit = uci_get("lorawan-gateway", "serial", "stopbit").unwrap_or_else(|_| "1".to_string());
-    let checkbit = uci_get("lorawan-gateway", "serial", "checkbit").unwrap_or_else(|_| "none".to_string());
+    let stopbit = uci_get("lorawan-gateway", "mqtt", "stopbit").unwrap_or_else(|_| "1".to_string());
+    let checkbit = uci_get("lorawan-gateway", "mqtt", "checkbit").unwrap_or_else(|_| "none".to_string());
 
     let serial_config = SerialConfig {
         device,
@@ -379,7 +379,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                                         }
                                         // Handle other incoming events
                                         other => {
-                                            logger.log(&format!("MQTT event: {:?}", other));
+                                            // logger.log(&format!("MQTT event: {:?}", other));
                                         }
                                     }
                                 }

@@ -218,6 +218,92 @@ return view.extend({
             return uci.set('lorawan-gateway', 'mqtt', 'keepalive', value);
         };
 
+        // Serial Select section header
+        o = s.taboption('mqtt', form.DummyValue, "_serial_header");
+        o.rawhtml = true;
+        o.cfgvalue = function() {
+            return '<h3 style="margin-top:20px;padding-top:10px;border-bottom:1px solid #ccc;">Serial Select</h3>';
+        };
+
+        o = s.taboption('mqtt', form.ListValue, "mqtt_device", _("Port"));
+        o.value("ttyAMA2", "ttyAMA2");
+        o.value("ttyAMA3", "ttyAMA3");
+        o.value("ttyAMA4", "ttyAMA4");
+        o.default = "ttyAMA2";
+        o.rmempty = false;
+        o.cfgvalue = function(section_id) {
+            return uci.get('lorawan-gateway', 'mqtt', 'device') || 'ttyAMA2';
+        };
+        o.write = function(section_id, value) {
+            return uci.set('lorawan-gateway', 'mqtt', 'device', value);
+        };
+
+        o = s.taboption('mqtt', form.ListValue, "mqtt_baudrate", _("Baudrate"));
+        o.value("110", "110");
+        o.value("300", "300");
+        o.value("600", "600");
+        o.value("1200", "1200");
+        o.value("2400", "2400");
+        o.value("4800", "4800");
+        o.value("9600", "9600");
+        o.value("14400", "14400");
+        o.value("19200", "19200");
+        o.value("38400", "38400");
+        o.value("57600", "57600");
+        o.value("115200", "115200");
+        o.value("128000", "128000");
+        o.value("256000", "256000");
+        o.default = "9600";
+        o.rmempty = false;
+        o.cfgvalue = function(section_id) {
+            return uci.get('lorawan-gateway', 'mqtt', 'baudrate') || '9600';
+        };
+        o.write = function(section_id, value) {
+            return uci.set('lorawan-gateway', 'mqtt', 'baudrate', value);
+        };
+
+        o = s.taboption('mqtt', form.ListValue, "mqtt_databit", _("Data Bits"));
+        o.value("5", "5");
+        o.value("6", "6");
+        o.value("7", "7");
+        o.value("8", "8");
+        o.default = "8";
+        o.rmempty = false;
+        o.cfgvalue = function(section_id) {
+            return uci.get('lorawan-gateway', 'mqtt', 'databit') || '8';
+        };
+        o.write = function(section_id, value) {
+            return uci.set('lorawan-gateway', 'mqtt', 'databit', value);
+        };
+
+        o = s.taboption('mqtt', form.ListValue, "mqtt_stopbit", _("Stop Bits"));
+        o.value("1", "1");
+        o.value("1.5", "1.5");
+        o.value("2", "2");
+        o.default = "1";
+        o.rmempty = false;
+        o.cfgvalue = function(section_id) {
+            return uci.get('lorawan-gateway', 'mqtt', 'stopbit') || '1';
+        };
+        o.write = function(section_id, value) {
+            return uci.set('lorawan-gateway', 'mqtt', 'stopbit', value);
+        };
+
+        o = s.taboption('mqtt', form.ListValue, "mqtt_checkbit", _("Parity"));
+        o.value("none", _("None"));
+        o.value("odd", _("Odd"));
+        o.value("even", _("Even"));
+        o.value("mark", _("Mark"));
+        o.value("space", _("Space"));
+        o.default = "none";
+        o.rmempty = false;
+        o.cfgvalue = function(section_id) {
+            return uci.get('lorawan-gateway', 'mqtt', 'checkbit') || 'none';
+        };
+        o.write = function(section_id, value) {
+            return uci.set('lorawan-gateway', 'mqtt', 'checkbit', value);
+        };
+
         // Security section header
         o = s.taboption('mqtt', form.DummyValue, "_security_header");
         o.rawhtml = true;
