@@ -1,0 +1,25 @@
+{
+    "luci-app-cellular": {
+        "description": "Grant UCI access to cellular configuration",
+        "read": {
+            "ubus": {
+                "uci": [
+                    "get"
+                ]
+            },
+            "uci": [
+                "lte_config"
+            ]
+        },
+        "write": {
+            "ubus": {
+                "uci": [
+                    "set"
+                ]
+            },
+            "uci": [
+                "lte_config"
+            ]
+        }
+    }
+}

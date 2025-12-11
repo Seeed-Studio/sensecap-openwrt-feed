@@ -1,0 +1,18 @@
+{
+    "admin/gateway/cellular": {
+        "title": "Cellular",
+        "order": 3,
+        "action": {
+            "type": "alias",
+            "path": "admin/gateway/cellular/general"
+        }
+    },
+    "admin/gateway/cellular/general": {
+        "title": "Cellular Configuration",
+        "order": 1,
+        "action": {
+            "type": "view",
+            "path": "cellular/cellular"
+        }
+    }
+}

@@ -1,0 +1,15 @@
+{
+    "admin/gateway": {
+        "title": "Gateway",
+        "order": 1,
+        "action": {
+            "type": "firstchild",
+            "recurse": true
+        },
+        "depends": {
+            "acl": [
+                "luci-app-gateway"
+            ]
+        }
+    }
+}

@@ -1,0 +1,39 @@
+{
+    "luci-app-lora": {
+        "description": "Grant UCI access to lora configuration",
+        "read": {
+			"file": {
+				"/tmp/lora/log": [
+					"read"
+				],
+				"/etc/device_eui": [
+					"read"
+				]
+			},
+            "ubus": {
+                "uci": [
+                    "get"
+                ]
+            },
+            "uci": [
+                "lora",
+                "lora-basicstation",
+                "chirpstack-concentratord",
+                "chirpstack-udp-forwarder"
+            ]
+        },
+        "write": {
+            "ubus": {
+                "uci": [
+                    "set"
+                ]
+            },
+            "uci": [
+                "lora",
+                "lora-basicstation",
+                "chirpstack-concentratord",
+                "chirpstack-udp-forwarder"
+            ]
+        }
+    }
+}

@@ -1,0 +1,26 @@
+{
+	"admin/gateway/rs485": {
+		"title": "RS485",
+		"order": 2,
+		"action": {
+			"type": "alias",
+			"path": "admin/gateway/rs485/general"
+		}
+	},
+	"admin/gateway/rs485/general": {
+		"title": "RS485 Configuration",
+		"order": 1,
+		"action": {
+			"type": "view",
+			"path": "rs485/rs485"
+		}
+	},
+	"admin/gateway/rs485/log": {
+		"title": "Log",
+		"order": 2,
+		"action": {
+			"type": "view",
+			"path": "rs485/log"
+		}
+	}
+}

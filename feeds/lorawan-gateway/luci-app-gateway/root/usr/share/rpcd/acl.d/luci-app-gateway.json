@@ -1,0 +1,19 @@
+{
+    "luci-app-gateway": {
+        "description": "Grant UCI access to gateway configuration",
+        "read": {
+            "ubus": {
+                "uci": [
+                    "get"
+                ]
+            }
+        },
+        "write": {
+            "ubus": {
+                "uci": [
+                    "set"
+                ]
+            }
+        }
+    }
+}

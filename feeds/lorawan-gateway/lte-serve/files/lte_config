@@ -1,0 +1,7 @@
+config cellular 'cellular'
+	option enabled '1'
+	option apn 'unknow'
+	option username 'unknow'
+	option password 'unknow'
+	option auth 'unknow'
+	option pin 'unknow'

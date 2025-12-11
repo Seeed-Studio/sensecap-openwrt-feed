@@ -1,0 +1,30 @@
+{
+	"luci-app-rs485": {
+		"description": "Grant access to rs485 configuration",
+		"read": {
+			"file": {
+				"/tmp/rs485/log": [
+					"read"
+				]
+			},
+			"ubus": {
+				"uci": [
+					"get"
+				]
+			},
+			"uci": [
+				"rs485-module"
+			]
+		},
+		"write": {
+			"ubus": {
+				"uci": [
+					"set"
+				]
+			},
+			"uci": [
+				"rs485-module"
+			]
+		}
+	}
+}
