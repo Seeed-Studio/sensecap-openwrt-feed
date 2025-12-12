@@ -73,26 +73,30 @@ return view.extend({
         o.render = function() {
             return E('div', { 'class': 'serial-tool-container' }, [
                 E('style', [
-                    '.serial-tool-container { display: flex; flex-direction: column; gap: 10px; margin-top: 10px; }',
+                    '.serial-tool-container { display: flex; flex-direction: column; gap: 8px; margin-top: 20px; padding: 15px; border: 1px solid #ddd; border-radius: 4px; background: #fafafa; }',
                     '.tool-row { display: flex; gap: 10px; align-items: stretch; }',
-                    '.tool-left { flex: 7; display: flex; flex-direction: column; }',
-                    '.tool-right { flex: 3; display: flex; flex-direction: column; gap: 5px; }',
-                    '.rx-box { flex: 1; width: 100%; resize: none; font-family: monospace; padding: 5px; border: 1px solid #ccc; box-sizing: border-box; }',
-                    '.tx-box { height: 100px; width: 100%; resize: none; font-family: monospace; padding: 5px; border: 1px solid #ccc; box-sizing: border-box; }',
-                    '#serial_settings_panel .cbi-value { margin-bottom: 0; padding: 5px 0; border: none; }',
-                    '#serial_settings_panel .cbi-value-title { width: 40%; float: left; text-align: left; font-weight: normal; }',
-                    '#serial_settings_panel .cbi-value-field { width: 60%; float: left; }',
-                    '.tool-btn { width: 100%; margin-top: 5px; }'
+                    '.tool-left { flex: 1; display: flex; flex-direction: column; min-width: 0; }',  
+                    '.tool-right { flex: 0.6; display: flex; flex-direction: column; gap: 8px; }',
+                    '.rx-box { height: 300px; width: 100%; resize: vertical; font-family: monospace; font-size: 12px; padding: 8px; border: 1px solid #ccc; border-radius: 3px; box-sizing: border-box; background: #fff; }',
+                    '.tx-box { height: 100px; width: 100%; resize: vertical; font-family: monospace; font-size: 12px; padding: 8px; border: 1px solid #ccc; border-radius: 3px; box-sizing: border-box; background: #fff; }',
+                    '#serial_settings_panel { display: flex; flex-direction: column; gap: 5px; width: 100%; }',
+                    '#serial_settings_panel .cbi-value { margin: 0; padding: 0; border: none; background: #fff; border-radius: 3px; display: flex; width: 100%; }',
+                    '#serial_settings_panel .cbi-value-title { width: 35%; min-width: 100px; padding: 8px 10px; font-size: 13px; font-weight: 500; text-align: left; }',
+                    '#serial_settings_panel .cbi-value-field { width: 65%; padding: 6px 10px; }',
+                    '#serial_settings_panel .cbi-value-field select { width: 100%; font-size: 12px; height: 32px; }',
+                    '.tool-btn { width: 100%; height: 32px; margin: 0; font-size: 13px; cursor: pointer; }',
+                    '.tool-label { font-weight: 600; margin-bottom: 5px; font-size: 14px; color: #333; }',
                 ]),
                 // Top Row: RX + Settings
                 E('div', { 'class': 'tool-row' }, [
                     E('div', { 'class': 'tool-left' }, [
-                        E('label', { 'style': 'font-weight:bold; margin-bottom:5px;' }, _('Receive Buffer')),
-                        E('textarea', { 'id': 'serial_rx', 'class': 'rx-box', 'readonly': 'readonly' })
+                        E('div', { 'class': 'tool-label' }, _('Receive Buffer')),
+                        E('textarea', { 'id': 'serial_rx', 'class': 'rx-box', 'readonly': 'readonly', 'placeholder': 'Received data will appear here...' })
                     ]),
                     E('div', { 'class': 'tool-right', 'id': 'serial_settings_panel' }, [
-                        // Settings will be moved here
+                        E('div', { 'class': 'tool-label', 'style': 'text-align: center; margin-bottom: 8px;' }, _('Serial Settings')),
                         E('div', { 'id': 'settings_placeholder' }),
+                        E('div', { 'class': 'divider' }),
                         E('button', { 'class': 'cbi-button cbi-button-apply tool-btn', 'id': 'btn_open_close' }, _('Open Serial Port')),
                         E('button', { 'class': 'cbi-button cbi-button-reset tool-btn', 'id': 'btn_clear_rx' }, _('Clear Receive'))
                     ])
@@ -100,45 +104,85 @@ return view.extend({
                 // Bottom Row: TX + Controls
                 E('div', { 'class': 'tool-row' }, [
                     E('div', { 'class': 'tool-left' }, [
-                        E('label', { 'style': 'font-weight:bold; margin-bottom:5px;' }, _('Send Buffer')),
-                        E('textarea', { 'id': 'serial_tx', 'class': 'tx-box' })
+                        E('div', { 'class': 'tool-label' }, _('Send Buffer')),
+                        E('textarea', { 'id': 'serial_tx', 'class': 'tx-box', 'placeholder': 'Enter data to send...' })
                     ]),
                     E('div', { 'class': 'tool-right' }, [
-                        E('div', { 'style': 'height: 24px;' }), // Spacer for label alignment
-                        E('button', { 'class': 'cbi-button cbi-button-action tool-btn', 'id': 'btn_send' }, _('Send')),
+                        E('div', { 'style': 'height: 24px;' }),
+                        E('button', { 'class': 'cbi-button cbi-button-action tool-btn', 'id': 'btn_send', 'disabled': 'disabled' }, _('Send')),
                         E('button', { 'class': 'cbi-button cbi-button-reset tool-btn', 'id': 'btn_clear_tx' }, _('Clear Send'))
                     ])
                 ]),
                 // Script to move widgets and handle events
                 E('script', [
-                    'requestAnimationFrame(function() {',
+                    'setTimeout(function() {',
                     '	var panel = document.getElementById("settings_placeholder");',
                     '	var widgets = ["device", "baudrate", "databit", "stopbit", "checkbit"];',
                     '	widgets.forEach(function(w) {',
-                    '		var el = document.getElementById("cbi-lorawan-gateway-serial-" + w);',
+                    '		var el = document.getElementById("cbid.rs485-module-serial-" + w);',
+                    '		if (!el) el = document.querySelector("[id*=\'serial-" + w + "\']");',
                     '		if (el && panel) {',
                     '			panel.appendChild(el);',
                     '		}',
                     '	});',
+                    '',
                     '	var btnOpen = document.getElementById("btn_open_close");',
+                    '	var btnSend = document.getElementById("btn_send");',
+                    '	var btnClearRx = document.getElementById("btn_clear_rx");',
+                    '	var btnClearTx = document.getElementById("btn_clear_tx");',
+                    '	var rxBox = document.getElementById("serial_rx");',
+                    '	var txBox = document.getElementById("serial_tx");',
+                    '	var isOpen = false;',
+                    '',
                     '	if (btnOpen) {',
                     '		btnOpen.onclick = function(e) {',
                     '			e.preventDefault();',
-                    '			var mqttEnabled = document.getElementById("cbid.lorawan-gateway.serial.mqtt_enabled");',
+                    '			var mqttEnabled = document.getElementById("cbid.rs485-module-serial-mqtt_enabled");',
                     '			if (mqttEnabled && mqttEnabled.checked) {',
-                    '				alert("Please disable MQTT to enable serial port tool");',
+                    '				alert("Please disable MQTT bridge to use serial port tool");',
                     '				return;',
                     '			}',
-                    '			if (this.innerText === "Open Serial Port") {',
-                    '				this.innerText = "Close Serial Port";',
-                    '				this.className = "cbi-button cbi-button-reset tool-btn";',
+                    '			isOpen = !isOpen;',
+                    '			if (isOpen) {',
+                    '				this.textContent = "Close Serial Port";',
+                    '				this.className = "cbi-button cbi-button-negative tool-btn";',
+                    '				btnSend.disabled = false;',
+                    '				rxBox.value = "[" + new Date().toLocaleTimeString() + "] Serial port opened\\n";',
                     '			} else {',
-                    '				this.innerText = "Open Serial Port";',
+                    '				this.textContent = "Open Serial Port";',
                     '				this.className = "cbi-button cbi-button-apply tool-btn";',
+                    '				btnSend.disabled = true;',
+                    '				rxBox.value += "[" + new Date().toLocaleTimeString() + "] Serial port closed\\n";',
                     '			}',
                     '		};',
                     '	}',
-                    '});'
+                    '',
+                    '	if (btnSend) {',
+                    '		btnSend.onclick = function(e) {',
+                    '			e.preventDefault();',
+                    '			if (!isOpen) return;',
+                    '			var data = txBox.value;',
+                    '			if (data) {',
+                    '				rxBox.value += "[" + new Date().toLocaleTimeString() + "] TX: " + data + "\\n";',
+                    '				rxBox.scrollTop = rxBox.scrollHeight;',
+                    '			}',
+                    '		};',
+                    '	}',
+                    '',
+                    '	if (btnClearRx) {',
+                    '		btnClearRx.onclick = function(e) {',
+                    '			e.preventDefault();',
+                    '			rxBox.value = "";',
+                    '		};',
+                    '	}',
+                    '',
+                    '	if (btnClearTx) {',
+                    '		btnClearTx.onclick = function(e) {',
+                    '			e.preventDefault();',
+                    '			txBox.value = "";',
+                    '		};',
+                    '	}',
+                    '}, 100);'
                 ].join('\n'))
             ]);
         };
