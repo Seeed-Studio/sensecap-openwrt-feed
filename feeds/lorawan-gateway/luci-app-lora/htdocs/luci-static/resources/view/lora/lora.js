@@ -152,7 +152,7 @@ return view.extend({
 						callInitAction('chirpstack-udp-forwarder', 'stop'),
 						callInitAction('chirpstack-udp-forwarder', 'disable')
 					];
-				} else if (platform === "basicstation") {
+				} else if (platform === "basic_station") {
 					// Enable basicstation, disable chirpstack-concentratord
 					actions = [
 						callInitAction('chirpstack-concentratord', 'stop'),

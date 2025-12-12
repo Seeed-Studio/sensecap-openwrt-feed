@@ -2,17 +2,20 @@
     "luci-app-lora": {
         "description": "Grant UCI access to lora configuration",
         "read": {
-			"file": {
-				"/tmp/lora/log": [
-					"read"
-				],
-				"/etc/device_eui": [
-					"read"
-				]
-			},
+            "file": {
+                "/tmp/lora/log": [
+                    "read"
+                ],
+                "/etc/device_eui": [
+                    "read"
+                ]
+            },
             "ubus": {
                 "uci": [
                     "get"
+                ],
+                "luci": [
+                    "getInitList"
                 ]
             },
             "uci": [
@@ -27,7 +30,11 @@
         "write": {
             "ubus": {
                 "uci": [
-                    "set"
+                    "set",
+                    "commit"
+                ],
+                "luci": [
+                    "setInitAction"
                 ]
             },
             "uci": [
