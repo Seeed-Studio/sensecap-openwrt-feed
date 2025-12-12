@@ -1,0 +1,46 @@
+#!/bin/sh
+# Delete existing bridge and LAN configuration
+uci delete network.lan
+uci delete network.@device[0]
+uci commit network
+
+# Set network configuration
+uci set network.loopback=interface
+uci set network.loopback.device='lo'
+uci set network.loopback.proto='static'
+uci set network.loopback.ipaddr='127.0.0.1'
+uci set network.loopback.netmask='255.0.0.0'
+uci set network.globals=globals
+uci set network.globals.ula_prefix='fdf4:628a:1dc9::/48'
+uci set network.wan=interface
+uci set network.wan.device='eth0'
+uci set network.wan.proto='dhcp'
+uci commit network
+
+# Set firewall rules
+uci add firewall rule
+uci set firewall.@rule[-1].name='Allow-WAN-HTTP'
+uci set firewall.@rule[-1].src='wan'
+uci set firewall.@rule[-1].proto='tcp'
+uci set firewall.@rule[-1].dest_port='80'
+uci set firewall.@rule[-1].target='ACCEPT'
+uci set firewall.@rule[-1].family='ipv4'
+uci add firewall rule
+uci set firewall.@rule[-1].name='Allow-ssh-WAN'
+uci set firewall.@rule[-1].src='wan'
+uci set firewall.@rule[-1].proto='tcp'
+uci set firewall.@rule[-1].dest_port='22'
+uci set firewall.@rule[-1].target='ACCEPT'
+uci set firewall.@rule[-1].family='ipv4'
+uci add firewall rule
+uci set firewall.@rule[-1].name='Allow-WAN-CHIRPSTACK'
+uci set firewall.@rule[-1].src='wan'
+uci set firewall.@rule[-1].proto='tcp'
+uci set firewall.@rule[-1].dest_port='8080'
+uci set firewall.@rule[-1].target='ACCEPT'
+uci set firewall.@rule[-1].family='ipv4'
+uci commit firewall
+
+# Restart services
+/etc/init.d/network restart
+/etc/init.d/firewall restart

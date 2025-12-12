@@ -11,7 +11,8 @@
         "write": {
             "ubus": {
                 "uci": [
-                    "set"
+                    "set",
+                    "commit"
                 ]
             }
         }

@@ -18,8 +18,10 @@
             "uci": [
                 "lora",
                 "lora-basicstation",
+                "chirpstack",
                 "chirpstack-concentratord",
-                "chirpstack-udp-forwarder"
+                "chirpstack-udp-forwarder",
+                "chirpstack-mqtt-forwarder"
             ]
         },
         "write": {
@@ -31,8 +33,10 @@
             "uci": [
                 "lora",
                 "lora-basicstation",
+                "chirpstack",
                 "chirpstack-concentratord",
-                "chirpstack-udp-forwarder"
+                "chirpstack-udp-forwarder",
+                "chirpstack-mqtt-forwarder"
             ]
         }
     }

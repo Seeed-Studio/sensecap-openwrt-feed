@@ -349,9 +349,11 @@ return baseclass.extend({
 				}
 			}
 		}
-		var concentratordSections = uci.sections("chirpstack-concentratord", "sx1302");
-		uci.set("chirpstack-concentratord", concentratordSections[0]['.name'], "channel_plan", channelPlan);
-		uci.set("chirpstack-concentratord", concentratordSections[0]['.name'], "region", regionId);
+
+		uci.set("chirpstack-concentratord", `@sx1302[0]`, "channel_plan", channelPlan);
+		uci.set("chirpstack-concentratord", `@sx1302[0]`, "region", regionId);
+        uci.set("chirpstack-mqtt-forwarder", '@mqtt[0]', 'topic_prefix', channelPlan);
+        uci.set("chirpstack", '@network[0]', 'enabled_regions', [channelPlan]);
 
 		this.setBasicStationRegion(regionId);
 	}

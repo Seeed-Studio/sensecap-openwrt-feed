@@ -122,8 +122,10 @@ return view.extend({
 			uci.load('lora'),
 			fs.read('/etc/device_eui').catch(function () { return ''; }),
 			uci.load('basicstation'),
+			uci.load('chirpstack'),
 			uci.load('chirpstack-concentratord'),
 			uci.load('chirpstack-udp-forwarder'),
+			uci.load('chirpstack-mqtt-forwarder')
 		]);
 	},
 
