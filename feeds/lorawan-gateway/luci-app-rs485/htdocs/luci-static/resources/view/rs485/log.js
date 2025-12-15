@@ -14,7 +14,7 @@ return view.extend({
 	load: function() {
 		return Promise.all([
 			uci.load('rs485-module'),
-			L.resolveDefault(fs.read('/tmp/rs485-module/log'), '')
+			L.resolveDefault(fs.read('/tmp/rs485/log'), '')
 		]);
 	},
 
