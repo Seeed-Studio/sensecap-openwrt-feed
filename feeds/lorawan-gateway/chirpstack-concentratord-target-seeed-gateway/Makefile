@@ -9,7 +9,7 @@ include $(INCLUDE_DIR)/package.mk
 define Package/chirpstack-concentratord-target-seeed-gateway
 	SECTION:=chirpstack
 	CATEGORY:=ChirpStack
-	TITLE:=ChirpStack Concentratord (Seeed SenseCAP M2)
+	TITLE:=ChirpStack Concentratord (Seeed Gateway)
 	URL:=https://github.com/chirpstack/chirpstack-concentratord
 	DEPENDS:=+chirpstack-concentratord-sx1302
 endef
