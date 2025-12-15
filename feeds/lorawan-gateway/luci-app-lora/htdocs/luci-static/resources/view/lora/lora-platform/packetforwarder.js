@@ -38,6 +38,15 @@ return view.extend({
 
             return 'Please enter a hostname:port';
         }
+        o.write = function (section_id, value) {
+            // Save server to chirpstack-udp-forwarder config
+            uci.set('chirpstack-udp-forwarder', section_id, 'server', value);
+            // Also save to lora config for consistency
+            var radioSection = uci.sections("lora", "radio")[0];
+            if (radioSection) {
+                uci.set('lora', radioSection['.name'], 'server', value);
+            }
+        }
 
         return mMap;
     }
