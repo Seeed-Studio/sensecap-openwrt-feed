@@ -34,7 +34,7 @@ case $1 in
 "
 	done
 
-	if [ ! -x /sbin/resolvconf ]; then
+	if [ -x /sbin/resolvconf ]; then
 	    echo -n "$R" | resolvconf -a "${interface}.udhcpc"
 	else
 	    echo -n "$R" > "$RESOLV_CONF"

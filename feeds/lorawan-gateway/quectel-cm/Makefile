@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=quectel-CM
-PKG_VERSION:=1.1.34
+PKG_VERSION:=1.6.8
 PKG_RELEASE:=1
 
 include $(INCLUDE_DIR)/package.mk

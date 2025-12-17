@@ -1,3 +1,14 @@
+/*
+    Copyright 2025 Quectel Wireless Solutions Co.,Ltd
+
+    Quectel hereby grants customers of Quectel a license to use, modify,
+    distribute and publish the Software in binary form provided that
+    customers shall have no right to reverse engineer, reverse assemble,
+    decompile or reduce to source code form any portion of the Software. 
+    Under no circumstances may customers modify, demonstrate, use, deliver 
+    or disclose any portion of the Software in source code form.
+*/
+
 #include <stdio.h>
 #include <string.h>
 #include <termios.h>
@@ -6,6 +17,7 @@
 #include "QMIThread.h"
 
 #ifdef CONFIG_GOBINET
+static int qmiclientId[QMUX_TYPE_ALL];
 
 // IOCTL to generate a client ID for this service type
 #define IOCTL_QMI_GET_SERVICE_FILE 0x8BE0 + 1
@@ -16,10 +28,11 @@
 // IOCTL to get the MEID of the device
 #define IOCTL_QMI_GET_DEVICE_MEID 0x8BE0 + 3
 
-int GobiNetSendQMI(PQCQMIMSG pRequest) {
+static int GobiNetSendQMI(PQCQMIMSG pRequest) {
     int ret, fd;
 
     fd = qmiclientId[pRequest->QMIHdr.QMIType];
+    pRequest->QMIHdr.ClientId = (fd&0xFF) ? fd&0xFF : pRequest->QMIHdr.QMIType;
 
     if (fd <= 0) {
         dbg_time("%s QMIType: %d has no clientID", __func__, pRequest->QMIHdr.QMIType);
@@ -44,12 +57,11 @@ int GobiNetSendQMI(PQCQMIMSG pRequest) {
 
 static int GobiNetGetClientID(const char *qcqmi, UCHAR QMIType) {
     int ClientId;
-    ClientId = open(qcqmi, O_RDWR | O_NONBLOCK | O_NOCTTY);
+    ClientId = cm_open_dev(qcqmi);
     if (ClientId == -1) {
         dbg_time("failed to open %s, errno: %d (%s)", qcqmi, errno, strerror(errno));
-        return -1;
+        return 0;
     }
-    fcntl(cdc_wdm_fd, F_SETFD, FD_CLOEXEC) ;
 
     if (ioctl(ClientId, IOCTL_QMI_GET_SERVICE_FILE, QMIType) != 0) {
         dbg_time("failed to get ClientID for 0x%02x errno: %d (%s)", QMIType, errno, strerror(errno));
@@ -65,6 +77,7 @@ static int GobiNetGetClientID(const char *qcqmi, UCHAR QMIType) {
         case QMUX_TYPE_WMS: dbg_time("Get clientWMS = %d", ClientId); break;
         case QMUX_TYPE_PDS: dbg_time("Get clientPDS = %d", ClientId); break;
         case QMUX_TYPE_UIM: dbg_time("Get clientUIM = %d", ClientId); break;
+        case QMUX_TYPE_COEX: dbg_time("Get clientCOEX = %d", ClientId); break;
         case QMUX_TYPE_WDS_ADMIN: dbg_time("Get clientWDA = %d", ClientId);
         break;
         default: break;
@@ -73,7 +86,7 @@ static int GobiNetGetClientID(const char *qcqmi, UCHAR QMIType) {
     return ClientId;
 }
 
-int GobiNetDeInit(void) {
+static int GobiNetDeInit(void) {
     unsigned int i;
     for (i = 0; i < sizeof(qmiclientId)/sizeof(qmiclientId[0]); i++)
     {
@@ -87,17 +100,24 @@ int GobiNetDeInit(void) {
     return 0;
 }
 
-void * GobiNetThread(void *pData) {
+static void * GobiNetThread(void *pData) {
     PROFILE_T *profile = (PROFILE_T *)pData;
     const char *qcqmi = (const char *)profile->qmichannel;
+    int wait_for_request_quit = 0;   
     
     qmiclientId[QMUX_TYPE_WDS] = GobiNetGetClientID(qcqmi, QMUX_TYPE_WDS);
-    if (profile->IsDualIPSupported)
+    if (profile->enable_ipv6)
         qmiclientId[QMUX_TYPE_WDS_IPV6] = GobiNetGetClientID(qcqmi, QMUX_TYPE_WDS);
     qmiclientId[QMUX_TYPE_DMS] = GobiNetGetClientID(qcqmi, QMUX_TYPE_DMS);
     qmiclientId[QMUX_TYPE_NAS] = GobiNetGetClientID(qcqmi, QMUX_TYPE_NAS);
     qmiclientId[QMUX_TYPE_UIM] = GobiNetGetClientID(qcqmi, QMUX_TYPE_UIM);
-    qmiclientId[QMUX_TYPE_WDS_ADMIN] = GobiNetGetClientID(qcqmi, QMUX_TYPE_WDS_ADMIN);
+#ifdef CONFIG_COEX_WWAN_STATE
+    qmiclientId[QMUX_TYPE_COEX] = GobiNetGetClientID(qcqmi, QMUX_TYPE_COEX);
+#endif
+    if (profile->qmap_mode == 0 || profile->loopback_state) {//when QMAP enabled, set data format in GobiNet Driver
+        qmiclientId[QMUX_TYPE_WDS_ADMIN] = GobiNetGetClientID(qcqmi, QMUX_TYPE_WDS_ADMIN);
+        profile->wda_client = qmiclientId[QMUX_TYPE_WDS_ADMIN];
+    }
 
     //donot check clientWDA, there is only one client for WDA, if quectel-CM is killed by SIGKILL, i cannot get client ID for WDA again!
     if (qmiclientId[QMUX_TYPE_WDS] == 0)  /*|| (clientWDA == -1)*/ {
@@ -127,8 +147,13 @@ void * GobiNetThread(void *pData) {
         }
 
         do {
-            ret = poll(pollfds, nevents, -1);
+            ret = poll(pollfds, nevents, wait_for_request_quit ? 1000: -1);
          } while ((ret < 0) && (errno == EINTR));
+
+	if (ret == 0 && wait_for_request_quit) {
+    		QmiThreadRecvQMI(NULL); //main thread may pending on QmiThreadSendQMI()
+		continue;
+	}
 
         if (ret <= 0) {
             dbg_time("%s poll=%d, errno: %d (%s)", __func__, ret, errno, strerror(errno));
@@ -160,10 +185,8 @@ void * GobiNetThread(void *pData) {
                         case RIL_REQUEST_QUIT:
                             goto __GobiNetThread_quit;
                         break;
-                        case SIGTERM:
-                        case SIGHUP:
-                        case SIGINT:
-                            QmiThreadRecvQMI(NULL);
+                        case SIG_EVENT_STOP:
+                            wait_for_request_quit = 1;   
                         break;
                         default:
                         break;
@@ -174,10 +197,9 @@ void * GobiNetThread(void *pData) {
 
             {
                 ssize_t nreads;
-                UCHAR QMIBuf[512];
-                PQCQMIMSG pResponse = (PQCQMIMSG)QMIBuf;
+                PQCQMIMSG pResponse = (PQCQMIMSG)cm_recv_buf;
 
-                nreads = read(fd, &pResponse->MUXMsg, sizeof(QMIBuf) - sizeof(QCQMI_HDR));
+                nreads = read(fd, &pResponse->MUXMsg, sizeof(cm_recv_buf) - sizeof(QCQMI_HDR));
                 if (nreads <= 0)
                 {
                     dbg_time("%s read=%d errno: %d (%s)",  __func__, (int)nreads, errno, strerror(errno));
@@ -195,7 +217,7 @@ void * GobiNetThread(void *pData) {
                 pResponse->QMIHdr.IFType = USB_CTL_MSG_TYPE_QMI;
                 pResponse->QMIHdr.Length = cpu_to_le16(nreads + sizeof(QCQMI_HDR)  - 1);
                 pResponse->QMIHdr.CtlFlags = 0x00;
-                pResponse->QMIHdr.ClientId = fd & 0xFF;
+                pResponse->QMIHdr.ClientId = (fd&0xFF) ? fd&0xFF : pResponse->QMIHdr.QMIType;;
 
                 QmiThreadRecvQMI(pResponse);
             }
@@ -211,7 +233,10 @@ __GobiNetThread_quit:
     return NULL;
 }
 
-#else
-int GobiNetSendQMI(PQCQMIMSG pRequest) {return -1;}
-void * GobiNetThread(void *pData) {dbg_time("please set CONFIG_GOBINET"); return NULL;}
+const struct qmi_device_ops gobi_qmidev_ops = {
+	.deinit = GobiNetDeInit,
+	.send = GobiNetSendQMI,
+	.read = GobiNetThread,
+};
 #endif
+

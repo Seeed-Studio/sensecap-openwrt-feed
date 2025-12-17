@@ -1,19 +1,18 @@
-/*===========================================================================
+/*
+    Copyright 2025 Quectel Wireless Solutions Co.,Ltd
 
-                            M P Q C T L. H
-DESCRIPTION:
+    Quectel hereby grants customers of Quectel a license to use, modify,
+    distribute and publish the Software in binary form provided that
+    customers shall have no right to reverse engineer, reverse assemble,
+    decompile or reduce to source code form any portion of the Software. 
+    Under no circumstances may customers modify, demonstrate, use, deliver 
+    or disclose any portion of the Software in source code form.
+*/
 
-    This module contains QMI QCTL module.
+#ifndef QCQCTL_H
+#define QCQCTL_H
 
-INITIALIZATION AND SEQUENCING REQUIREMENTS:
-
-Copyright (C) 2011 by Qualcomm Technologies, Incorporated.  All Rights Reserved.
-===========================================================================*/
-
-#ifndef MPQCTL_H
-#define MPQCTL_H
-
-#include "MPQMI.h"
+#include "QCQMI.h"
 
 #pragma pack(push, 1)
 
@@ -94,6 +93,7 @@ typedef struct _QCQMICTL_TLV_HDR
 #define QMICTL_SYNC_REQ               0x0027
 #define QMICTL_SYNC_RESP              0x0027
 #define QMICTL_SYNC_IND               0x0027
+#define QMI_MESSAGE_CTL_INTERNAL_PROXY_OPEN 0xFF00
 
 #define QMICTL_FLAG_REQUEST    0x00
 #define QMICTL_FLAG_RESPONSE   0x01
@@ -170,7 +170,7 @@ typedef struct _QMICTL_GET_VERSION_RESP_MSG
    UCHAR  TLV2Type;        // QCTLV_TYPE_REQUIRED_PARAMETER
    USHORT TLV2Length;      // var
    UCHAR  NumElements;     // Num of QMUX_TYPE_VERSION_STRUCT
-   QMUX_TYPE_VERSION_STRUCT TypeVersion;
+   QMUX_TYPE_VERSION_STRUCT TypeVersion[0];
 } __attribute__ ((packed)) QMICTL_GET_VERSION_RESP_MSG, *PQMICTL_GET_VERSION_RESP_MSG;
 
 typedef struct _QMICTL_GET_CLIENT_ID_REQ_MSG
@@ -346,6 +346,17 @@ typedef struct _QMICTL_SYNC_IND_MSG
    USHORT Length;
 } __attribute__ ((packed)) QMICTL_SYNC_IND_MSG, *PQMICTL_SYNC_IND_MSG;
 
+typedef struct _QMICTL_LIBQMI_PROXY_OPEN_MSG
+{
+   UCHAR  CtlFlags;        // QMICTL_FLAG_RESPONSE
+   UCHAR  TransactionId;
+   USHORT QMICTLType;      // QMICTL_SET_DATA_FORMAT_RESP
+   USHORT Length;
+   UCHAR  TLVType;         // QCTLV_TYPE_RESULT_CODE
+   USHORT TLVLength;       // 0x0004
+   char device_path[0];       // result code
+} __attribute__ ((packed)) QMICTL_LIBQMI_PROXY_OPEN_MSG, *PQMICTL_LIBQMI_PROXY_OPEN_MSG;
+
 typedef struct _QMICTL_MSG
 {
    union
@@ -370,7 +381,9 @@ typedef struct _QMICTL_MSG
       QMICTL_SYNC_REQ_MSG                          SyncReq;
       QMICTL_SYNC_RESP_MSG                         SyncRsp;
       QMICTL_SYNC_IND_MSG                          SyncInd;
+      QMICTL_LIBQMI_PROXY_OPEN_MSG          LibQmiProxyOpenReq;
    };
 } __attribute__ ((packed)) QMICTL_MSG, *PQMICTL_MSG;
+#pragma pack(pop)
 
-#endif // MPQCTL_H
+#endif //QCQCTL_H
