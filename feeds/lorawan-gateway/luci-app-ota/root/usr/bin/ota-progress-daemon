@@ -1,0 +1,16 @@
+#!/bin/sh
+while true; do
+    if [ -f /tmp/firmware.img.tar.gz ] && [ ! -f /tmp/firmware.img.tar.gz.progress ]; then
+        echo '{"status":"complete","progress":"100%"}' > /www/ota-progress.json
+    elif [ -f /tmp/firmware.img.tar.gz.progress ]; then
+        progress=$(cat /tmp/firmware.img.tar.gz.progress | tr '\r' '\n' | tail -n1 | grep -o '[0-9]\+\.[0-9]\+%' | tail -1)
+        if [ -n "$progress" ]; then
+            echo "{\"status\":\"downloading\",\"progress\":\"$progress\"}" > /www/ota-progress.json
+        else
+            echo '{"status":"downloading","progress":"0%"}' > /www/ota-progress.json
+        fi
+    else
+        echo '{"status":"idle","progress":"0%"}' > /www/ota-progress.json
+    fi
+    sleep 1
+done

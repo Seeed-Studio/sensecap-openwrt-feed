@@ -1,0 +1,35 @@
+#!/bin/sh
+echo "Content-Type: application/json"
+echo "Cache-Control: no-cache"
+echo ""
+
+# URL decode function
+urldecode() {
+    local url_encoded="${1//+/ }"
+    printf '%b' "${url_encoded//%/\\x}"
+}
+
+# Get URL from query string
+CUSTOM_URL=""
+if [ -n "$QUERY_STRING" ]; then
+    # Extract url parameter
+    url_param=$(echo "$QUERY_STRING" | sed -n 's/.*url=\([^&]*\).*/\1/p')
+    if [ -n "$url_param" ]; then
+        CUSTOM_URL=$(urldecode "$url_param")
+    fi
+fi
+
+# Start download in background with custom URL
+if [ -n "$CUSTOM_URL" ]; then
+    /bin/ota download "$CUSTOM_URL" >/dev/null 2>&1 &
+else
+    /bin/ota download >/dev/null 2>&1 &
+fi
+
+# Start progress daemon if not running
+if ! pgrep -f ota-progress-daemon >/dev/null; then
+    /usr/bin/ota-progress-daemon >/dev/null 2>&1 &
+fi
+
+# Return immediately
+echo '{"status":"ok","message":"Download started"}'

@@ -1,15 +1,69 @@
 {
-	"luci-app-ota": {
-		"description": "Grant access to OTA upgrade interface",
-		"read": {
-			"uci": [
-				"ota"
-			]
-		},
-		"write": {
-			"uci": [
-				"ota"
-			]
-		}
-	}
+        "luci-app-ota": {
+                "description": "Grant access to OTA firmware upgrade",
+                "read": {
+                        "file": {
+                                "/tmp/firmware.img.tar.gz": [
+                                        "read"
+                                ],
+                                "/tmp/firmware.img.tar.gz.progress": [
+                                        "read"
+                                ],
+                                "/var/run/ota/ota.log": [
+                                        "read"
+                                ]
+                        },
+                        "ubus": {
+                                "file": [
+                                        "exec",
+                                        "read",
+                                        "stat"
+                                ]
+                        }
+                },
+                "write": {
+                        "file": {
+                                "/bin/ota check": [
+                                        "exec"
+                                ],
+                                "/bin/ota download": [
+                                        "exec"
+                                ],
+                                "/bin/ota progress": [
+                                        "exec"
+                                ],
+                                "/bin/ota cancel": [
+                                        "exec"
+                                ],
+                                "/bin/ota upgrade": [
+                                        "exec"
+                                ],
+                                "/bin/tar": [
+                                        "exec"
+                                ],
+                                "/sbin/reboot": [
+                                        "exec"
+                                ],
+                                "/tmp/firmware.img.tar.gz": [
+                                        "write"
+                                ],
+                                "/tmp/firmware.img.tar.gz.part": [
+                                        "write"
+                                ],
+                                "/tmp/firmware.img.tar.gz.progress": [
+                                        "write"
+                                ]
+                        },
+                        "ubus": {
+                                "file": [
+                                        "exec",
+                                        "write",
+                                        "remove"
+                                ],
+                                "system": [
+                                        "reboot"
+                                ]
+                        }
+                }
+        }
 }
