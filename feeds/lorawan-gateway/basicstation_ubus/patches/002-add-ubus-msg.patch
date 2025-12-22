@@ -1,0 +1,262 @@
+From 76f8386175998cfc26f45321cf7da5bc4ffc3662 Mon Sep 17 00:00:00 2001
+From: qian <ruiqian.tang@seeed.cc>
+Date: Sat, 20 Dec 2025 15:23:12 +0800
+Subject: [PATCH] add ubus msg.
+
+---
+ src-linux/gps.c       |  2 ++
+ src-linux/sys_linux.c |  3 +++
+ src-linux/sys_log.c   |  2 +-
+ src/s2e.c             |  5 ++++
+ src/sx130xconf.c      |  4 +++
+ src/tc.c              |  3 +++
+ src/ubus.c            | 60 +++++++++++++++++++++++++++++++++++++++++++
+ src/ubus.h            | 27 +++++++++++++++++++
+ 8 files changed, 105 insertions(+), 1 deletion(-)
+ create mode 100644 src/ubus.c
+ create mode 100644 src/ubus.h
+
+diff --git a/src-linux/gps.c b/src-linux/gps.c
+index 9371103..4cce87b 100644
+--- a/src-linux/gps.c
++++ b/src-linux/gps.c
+@@ -52,6 +52,7 @@ int sys_enableGPS (str_t _device) {
+ #include "sys.h"
+ #include "s2conf.h"
+ 
++#include "ubus.h"
+ 
+ // Special value to mark absent NMEA float/int field - e.g. $GPGGA,170801.00,,,,,0,00,99.99,,,,,,*69
+ #define NILFIELD 0x423a0a60
+@@ -366,6 +367,7 @@ static void nmea_gga (char* p) {
+ 
+     if( last_reported_fix <= 0 && fix > 0 && now > time_fixchange + delay &&
+         send_gpsev_fix(GPSEV_FIX, lat, lon, alt, dilution, satellites, quality, 0.0, 0.0)) {
++        gps_inform(lon, lat, alt, (uint32_t)time_of_fix);
+         last_reported_fix = fix;
+         nofix_backoff = 0;
+     }
+diff --git a/src-linux/sys_linux.c b/src-linux/sys_linux.c
+index 2bbb7e5..38b3fa3 100644
+--- a/src-linux/sys_linux.c
++++ b/src-linux/sys_linux.c
+@@ -52,6 +52,7 @@
+ #include "selftests.h"
+ 
+ #include "mbedtls/version.h"
++#include "ubus.h"
+ 
+ extern char* makeFilepath (const char* prefix, const char* suffix, char** pCachedFile, int isReadable); // sys.c
+ extern int writeFile (str_t file, const char* data, int datalen);
+@@ -1302,6 +1303,8 @@ int sys_main (int argc, char** argv) {
+ #endif // defined(CFG_ral_master_slave)
+ 
+     rt_yieldTo(&startupTmr, daemon ? startupDaemon : startupMaster);
++    
++    lora_statistics_init();
+     aio_loop();
+     // NOT REACHED
+     assert(0);
+diff --git a/src-linux/sys_log.c b/src-linux/sys_log.c
+index 33aa2e6..2eac1ad 100644
+--- a/src-linux/sys_log.c
++++ b/src-linux/sys_log.c
+@@ -62,7 +62,7 @@ static pthread_cond_t   condvar = PTHREAD_COND_INITIALIZER;
+ static pthread_t        thr;
+ static int              thrUp = 0;
+ 
+-static int orig_stderr = STDERR_FILENO;
++static int orig_stderr = STDOUT_FILENO;
+ 
+ // Fwd decl
+ static void addLog (const char *logline, int len);
+diff --git a/src/s2e.c b/src/s2e.c
+index 6a9c009..90b1156 100644
+--- a/src/s2e.c
++++ b/src/s2e.c
+@@ -34,6 +34,8 @@
+ #include "kwcrc.h"
+ #include "timesync.h"
+ 
++#include "ubus.h"
++
+ 
+ u1_t s2e_dcDisabled;    // no duty cycle limits - override for test/dev
+ u1_t s2e_ccaDisabled;   // no LBT etc           - ditto
+@@ -165,6 +167,7 @@ void s2e_flushRxjobs (s2ctx_t* s2ctx) {
+             sendbuf.pos = 0;
+             continue;
+         }
++        lora_statistics_info.rx_cnt++;
+         if( lbuf.buf )
+             log_specialFlush(lbuf.pos);
+         double reftime = 0.0;
+@@ -719,6 +722,8 @@ ustime_t s2e_nextTxAction (s2ctx_t* s2ctx, u1_t txunit) {
+         curr->dr, s2e_dr2rps(s2ctx, curr->dr),
+         curr->len, &s2ctx->txq.txdata[curr->off], curr->len);
+ 
++    lora_statistics_info.tx_cnt++;
++
+     int txerr = ral_tx(curr, s2ctx, ccaDisabled);
+     if( txerr != RAL_TX_OK ) {
+         if( txerr == RAL_TX_NOCA ) {
+diff --git a/src/sx130xconf.c b/src/sx130xconf.c
+index b7a33b0..2131736 100644
+--- a/src/sx130xconf.c
++++ b/src/sx130xconf.c
+@@ -40,6 +40,8 @@
+ #include "lgw/loragw_sx1302.h"
+ #endif // defined(CFG_sx1302)
+ 
++#include "ubus.h"
++
+ #define SX130X_RFE_MAX 400000  // Max if offset 400kHz
+ 
+ extern const uint8_t ifmod_config[LGW_IF_CHAIN_NB];
+@@ -723,6 +725,7 @@ int sx130xconf_start (struct sx130xconf* sx130xconf, u4_t cca_region) {
+         goto fail;
+     }
+     LOG(MOD_RAL|INFO, "Concentrator started (%~T)", rt_getTime()- t0);
++    lora_module_state_inform(1);
+ #if defined(CFG_smtcpico)
+     {
+         // Avoid timing issues with picocell MCU firmware - re-adjusts time after first TX
+@@ -758,6 +761,7 @@ int sx130xconf_start (struct sx130xconf* sx130xconf, u4_t cca_region) {
+     return 1;
+  fail:
+     LOG(MOD_RAL|ERROR, "Concentrator start failed: %s", errmsg);
++    lora_module_state_inform(0);
+     return 0;
+ }
+ 
+diff --git a/src/tc.c b/src/tc.c
+index 86ba7e8..62e6794 100644
+--- a/src/tc.c
++++ b/src/tc.c
+@@ -33,6 +33,7 @@
+ #include "s2e.h"
+ #include "tc.h"
+ 
++#include "ubus.h"
+ 
+ tc_t* TC;
+ static s1_t tstateLast;
+@@ -59,6 +60,7 @@ static void tc_muxs_connection (conn_t* _conn, int ev) {
+         rt_clrTimer(&tc->timeout);
+         tc->tstate = TC_MUXS_CONNECTED;
+         LOG(MOD_TCE|VERBOSE, "Connected to MUXS.");
++        server_connect_state_inform(1);
+         dbuf_t b = ws_getSendbuf(&tc->ws, MIN_UPJSON_SIZE);
+         assert(b.buf != NULL);   // this should not fail on a fresh connection
+         uj_encOpen(&b, '{');
+@@ -103,6 +105,7 @@ static void tc_muxs_connection (conn_t* _conn, int ev) {
+     if( ev == WSEV_CLOSED ) {
+         s1_t tstate = tc->tstate;
+         LOG(MOD_TCE|VERBOSE, "Connection to MUXS closed in state %d", tstate);
++        server_connect_state_inform(0);
+         if( tstate >= 0 ) {
+             // Quickly reopen muxs connection if just close else go thru infos
+             tstate = tstate == TC_MUXS_CONNECTED ? TC_ERR_CLOSED : TC_ERR_FAILED;
+diff --git a/src/ubus.c b/src/ubus.c
+new file mode 100644
+index 0000000..62ed3fb
+--- /dev/null
++++ b/src/ubus.c
+@@ -0,0 +1,60 @@
++#include "ubus.h"
++#include "sys.h"
++
++lora_statistics_t lora_statistics_info = { 0, 0};
++
++void server_connect_state_inform(uint8_t state)
++{
++    char network_info[128] = {0};
++    snprintf(network_info, sizeof(network_info), "ubus -S call sensecap  lora_network_connect '{\"station\":%d}'", state);
++     LOG(MOD_SYS|INFO, "ubus: %s", network_info);
++    system(network_info);
++}
++
++void lora_module_state_inform(uint8_t state)
++{
++    char info[128] = {0};
++   
++    snprintf(info, sizeof(info), "ubus -S call sensecap lora_module '{\"state\":%d}'", state);
++    LOG(MOD_SYS|INFO, "ubus: %s", info);
++    system(info);
++}
++
++
++void gps_inform(float  longitude, float latitude, float altitude, uint32_t gps_time)
++{
++    char gps_info[256] = {0};
++    snprintf(gps_info, sizeof(gps_info), "ubus -S call sensecap gps '{\"longitude\":\"%0.5f\",\"latitude\":\"%0.5f\",\"state\":1,\"altitude\":\"%i\", \"gps_time\":%li}'", longitude, latitude, altitude, gps_time);
++    LOG(MOD_SYS|INFO, "ubus: %s", gps_info);
++    system(gps_info);
++}
++
++static void lora_statistics_inform(uint32_t rx, uint32_t tx, uint32_t time)
++{
++    char statistics[256] = {0};
++    snprintf(statistics, sizeof(statistics), "ubus -S call sensecap lora '{\"rx_sum\":%u,\"tx_sum\":%u,\"report_time\":%lu, \"state\":1}'", rx, tx, time);
++    LOG(MOD_SYS|INFO, "ubus: %s", statistics);
++    system(statistics);
++}
++
++
++static  tmr_t    timer;
++static lora_statistics_t lora_statistics_last = { 0, 0};
++static  void lora_info_inform_cb(tmr_t* tmr)
++{
++    uint32_t rx = lora_statistics_info.rx_cnt - lora_statistics_last.rx_cnt;
++    uint32_t tx = lora_statistics_info.tx_cnt - lora_statistics_last.tx_cnt;
++    lora_statistics_last.rx_cnt = lora_statistics_info.rx_cnt;
++    lora_statistics_last.tx_cnt = lora_statistics_info.tx_cnt;
++
++    LOG(MOD_SYS|INFO, "lora info statistics: rx:%d (+%d), tx:%d (+%d)", lora_statistics_info.rx_cnt, rx, lora_statistics_info.tx_cnt, tx);
++    lora_statistics_inform(rx, tx, rt_getUTC()/1e6 );
++
++    rt_setTimer(&timer, rt_seconds_ahead(60));
++}
++
++void lora_statistics_init()
++{
++    LOG(MOD_SYS|INFO, "Start lora statistics");
++    rt_setTimerCb(&timer, rt_seconds_ahead(60), lora_info_inform_cb);
++}
+\ No newline at end of file
+diff --git a/src/ubus.h b/src/ubus.h
+new file mode 100644
+index 0000000..600b0e6
+--- /dev/null
++++ b/src/ubus.h
+@@ -0,0 +1,27 @@
++#ifndef _ubus_h_
++#define _ubus_h_
++
++#include <stddef.h>
++#include <stdbool.h>
++#include <stdint.h>
++#include <stdarg.h>
++#include <stdlib.h>
++#include <string.h>
++#include <stdio.h>
++
++typedef struct lora_statistics
++{
++    uint32_t tx_cnt;
++    uint32_t rx_cnt;
++
++}lora_statistics_t;
++
++void server_connect_state_inform(uint8_t state);
++void lora_module_state_inform(uint8_t state);
++void gps_inform(float  longitude, float latitude, float altitude, uint32_t gps_time);
++
++void lora_statistics_init();
++
++extern lora_statistics_t lora_statistics_info;
++#endif
++
+-- 
+2.43.0
+
