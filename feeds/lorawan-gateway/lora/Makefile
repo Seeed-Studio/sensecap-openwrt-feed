@@ -29,7 +29,8 @@ endef
 
 define Package/lora/install
 	$(INSTALL_DIR) $(1)/etc/config
-	$(INSTALL_CONF) ./files/lora.config $(1)/etc/config/lora
+	$(INSTALL_CONF) ./files/etc/config/lora.config $(1)/etc/config/lora
+
 
 	$(INSTALL_DIR) $(1)/usr/bin/
 	$(INSTALL_BIN) $(PKG_INSTALL_DIR)/bin/radio_init $(1)/usr/bin/radio_init

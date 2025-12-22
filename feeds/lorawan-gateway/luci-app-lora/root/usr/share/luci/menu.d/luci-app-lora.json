@@ -7,7 +7,7 @@
 		}
 	},
 	"admin/lora/general": {
-		"title": "General Configuration",
+		"title": "LoRa Network",
 		"order": 1,
 		"action": {
 			"type": "view",

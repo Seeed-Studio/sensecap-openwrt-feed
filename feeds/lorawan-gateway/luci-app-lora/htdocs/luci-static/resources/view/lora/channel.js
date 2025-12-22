@@ -5,6 +5,9 @@
 'require lora.regions as regions';
 
 return view.extend({
+	load: function() {
+		return uci.load('lora');
+	},
 	render: function() {
 		var m = new form.Map('lora', _('Channel Plan'), _('Configure LoRaWAN channel plan.'));
 

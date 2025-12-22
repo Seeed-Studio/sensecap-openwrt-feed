@@ -298,7 +298,9 @@ const options = [
 
 return baseclass.extend({
 	channelPlanRender: function (o) {
-		for (const region of options) {
+		var regionId = uci.get('lora', 'radio', 'region');
+		var region = options.find(r => r.id === regionId);
+		if (region && region.channelPlans) {
 			for (const channelPlan of region.channelPlans) {
 				o.value(channelPlan.id, channelPlan.name);
 			}

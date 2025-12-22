@@ -1,0 +1,29 @@
+#!/bin/sh
+
+if [ -e "/etc/config/lora" ]; then
+	platform=$(uci get lora.radio.platform)
+	eui=$(uci get lora.radio.eui)
+
+	if [  -n "$platform" -a -n "$eui" ];then
+		exit 0
+	fi
+else 
+	touch /etc/config/lora
+fi
+
+
+MAC_STR=`cat /sys/class/net/eth0/address`
+MAC_FORMATTED=$(echo $MAC_STR | sed 's/://g' | tr 'a-f' 'A-F')
+DEFAULT_EUI="${MAC_FORMATTED}0000"
+
+if [ -e "/etc/deviceinfo/eui" ]; then
+	DEFAULT_EUI=$(cat /etc/deviceinfo/eui)
+fi
+
+uci set lora.radio.platform="chirpstack"
+
+uci set	lora.radio.eui=$DEFAULT_EUI
+uci set	lora.radio.server='localhost:1700'
+
+uci commit lora
+exit 0
