@@ -1,13 +1,12 @@
 {
-	"admin/gateway/lora": {
+	"admin/lora": {
 		"title": "LoRa",
-		"order": 1,
+		"order": 60,
 		"action": {
-			"type": "alias",
-			"path": "admin/gateway/lora/general"
+			"type": "firstchild"
 		}
 	},
-	"admin/gateway/lora/general": {
+	"admin/lora/general": {
 		"title": "General Configuration",
 		"order": 1,
 		"action": {
@@ -15,7 +14,7 @@
 			"path": "lora/lora"
 		}
 	},
-	"admin/gateway/lora/log": {
+	"admin/lora/log": {
 		"title": "Log",
 		"order": 2,
 		"action": {

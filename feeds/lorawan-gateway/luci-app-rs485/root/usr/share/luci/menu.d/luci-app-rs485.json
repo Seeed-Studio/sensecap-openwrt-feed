@@ -1,23 +1,30 @@
 {
-	"admin/gateway/rs485": {
+	"admin/rs485": {
 		"title": "RS485",
-		"order": 2,
+		"order": 65,
 		"action": {
-			"type": "alias",
-			"path": "admin/gateway/rs485/general"
+			"type": "firstchild"
 		}
 	},
-	"admin/gateway/rs485/general": {
-		"title": "RS485 Configuration",
+	"admin/rs485/serial": {
+		"title": "Serial Port Settings",
 		"order": 1,
 		"action": {
 			"type": "view",
-			"path": "rs485/rs485"
+			"path": "rs485/serial"
 		}
 	},
-	"admin/gateway/rs485/log": {
-		"title": "Log",
+	"admin/rs485/mqtt": {
+		"title": "MQTT Settings",
 		"order": 2,
+		"action": {
+			"type": "view",
+			"path": "rs485/mqtt"
+                }
+        },
+	"admin/rs485/log": {
+		"title": "Log",
+		"order": 3,
 		"action": {
 			"type": "view",
 			"path": "rs485/log"

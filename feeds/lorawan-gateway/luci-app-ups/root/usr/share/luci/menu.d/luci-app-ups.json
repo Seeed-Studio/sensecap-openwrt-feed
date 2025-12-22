@@ -1,26 +1,10 @@
 {
-    "admin/gateway/ups": {
+    "admin/system/ups": {
         "title": "UPS",
-        "order": 4,
-        "action": {
-            "type": "alias",
-            "path": "admin/gateway/ups/general"
-        }
-    },
-    "admin/gateway/ups/general": {
-        "title": "UPS Configuration",
-        "order": 1,
+        "order": 60,
         "action": {
             "type": "view",
             "path": "ups/ups"
-        }
-    },
-    "admin/gateway/ups/log": {
-        "title": "Log",
-        "order": 2,
-        "action": {
-            "type": "view",
-            "path": "ups/log"
         }
     }
 }
