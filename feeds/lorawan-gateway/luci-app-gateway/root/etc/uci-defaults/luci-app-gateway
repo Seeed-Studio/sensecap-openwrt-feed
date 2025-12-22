@@ -56,6 +56,11 @@ uci set firewall.@rule[-1].target='ACCEPT'
 uci set firewall.@rule[-1].family='ipv4'
 uci commit firewall
 
+# Set rpcd login 
+uci set rpcd.@login[0].username='admin'
+uci commit rpcd
+
 # Restart services
 /etc/init.d/network restart
 /etc/init.d/firewall restart
+/etc/init.d/rpcd restart
