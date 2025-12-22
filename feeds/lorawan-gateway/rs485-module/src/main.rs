@@ -41,6 +41,8 @@ struct SerialConfig {
     databit: DataBits,
     stopbit: StopBits,
     checkbit: Parity,
+    flowcontrol: tokio_serial::FlowControl,
+    timeout: Duration,
 }
 
 // RS485 -> MQTT Message Structure
@@ -179,6 +181,11 @@ fn load_config_from_uci() -> Result<Config, Box<dyn std::error::Error + Send + S
         .unwrap_or(8);
     let stopbit = uci_get("rs485-module", "mqtt", "stopbit").unwrap_or_else(|_| "1".to_string());
     let checkbit = uci_get("rs485-module", "mqtt", "checkbit").unwrap_or_else(|_| "none".to_string());
+    let flowcontrol = uci_get("rs485-module", "mqtt", "flowcontrol").unwrap_or_else(|_| "none".to_string());
+    let timeout = uci_get("rs485-module", "mqtt", "timeout")
+        .ok()
+        .and_then(|s| s.parse().ok())
+        .unwrap_or(1000);
 
     let serial_config = SerialConfig {
         device,
@@ -198,6 +205,12 @@ fn load_config_from_uci() -> Result<Config, Box<dyn std::error::Error + Send + S
             "even" => Parity::Even,
             _ => Parity::None,
         },
+        flowcontrol: match flowcontrol.as_str() {
+            "rtscts" => tokio_serial::FlowControl::Hardware,
+            "xonxoff" => tokio_serial::FlowControl::Software,
+            _ => tokio_serial::FlowControl::None,
+        },
+        timeout: Duration::from_millis(timeout),
     };
 
     Ok(Config {
@@ -236,6 +249,8 @@ async fn setup_serial(
         .data_bits(config.databit)
         .stop_bits(config.stopbit)
         .parity(config.checkbit)
+        .flow_control(config.flowcontrol)
+        .timeout(config.timeout)
         .open_native_async()
         .map_err(|e| {
             e
@@ -264,8 +279,8 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
     let mut serial_port = match setup_serial(&config.serial).await {
         Ok(port) => {
             logger.log(&format!(
-                "Opening serial port: {} @ {} baud, {:?} data bits, {:?} stop bits, {:?} parity",
-                config.serial.device, config.serial.baudrate, config.serial.databit, config.serial.stopbit, config.serial.checkbit
+                "Opening serial port: {} @ {} baud, {:?} data bits, {:?} stop bits, {:?} parity, {:?} flow control, {:?} timeout",
+                config.serial.device, config.serial.baudrate, config.serial.databit, config.serial.stopbit, config.serial.checkbit, config.serial.flowcontrol, config.serial.timeout
             ));
             logger.log("Success opening serial port");
             port

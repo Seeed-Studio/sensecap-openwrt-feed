@@ -86,11 +86,11 @@ return view.extend({
             return uci.set('rs485-module', 'mqtt', 'keepalive', value);
         };
 
-        // Serial Select section header
+        // Serial Setting section header
         o = s.option(form.DummyValue, "_serial_header");
         o.rawhtml = true;
         o.cfgvalue = function() {
-            return '<h3 style="margin-top:20px;padding-top:10px;border-bottom:1px solid #ccc;">Serial Select</h3>';
+            return '<h3 style="margin-top:20px;padding-top:10px;border-bottom:1px solid #ccc;">Serial Setting</h3>';
         };
 
         o = s.option(form.ListValue, "mqtt_device", _("Port"));
@@ -170,6 +170,32 @@ return view.extend({
         };
         o.write = function(section_id, value) {
             return uci.set('rs485-module', 'mqtt', 'checkbit', value);
+        };
+
+
+        o = s.option(form.ListValue, "mqtt_flowcontrol", _("Flow Control"));
+        o.value("none", _("None"));
+        o.value("rtscts", "RTS/CTS");
+        o.value("xonxoff", "XON/XOFF");
+        o.default = "none";
+        o.rmempty = false;
+        o.cfgvalue = function(section_id) {
+            return uci.get('rs485-module', 'mqtt', 'flowcontrol') || 'none';
+        };
+        o.write = function(section_id, value) {
+            return uci.set('rs485-module', 'mqtt', 'flowcontrol', value);
+        };
+
+        o = s.option(form.Value, "mqtt_timeout", _("Timeout (ms)"));
+        o.datatype = "range(100,10000)";
+        o.placeholder = "1000";
+        o.default = "1000";
+        o.rmempty = false;
+        o.cfgvalue = function(section_id) {
+            return uci.get('rs485-module', 'mqtt', 'timeout') || '1000';
+        };
+        o.write = function(section_id, value) {
+            return uci.set('rs485-module', 'mqtt', 'timeout', value);
         };
 
         // Security section header
