@@ -56,6 +56,107 @@ uci set firewall.@rule[-1].target='ACCEPT'
 uci set firewall.@rule[-1].family='ipv4'
 uci commit firewall
 
+# Set mwan3 for multi-wan failover (priority: wan > LTE > wlan)
+# Delete default
+uci -q delete mwan3.wan6
+uci -q delete mwan3.wanb
+uci -q delete mwan3.wanb6
+uci -q delete mwan3.wan_m2_w3
+uci -q delete mwan3.wanb_m1_w2
+uci -q delete mwan3.wanb_m1_w3
+uci -q delete mwan3.wanb_m2_w2
+uci -q delete mwan3.wan6_m1_w3
+uci -q delete mwan3.wan6_m2_w3
+uci -q delete mwan3.wanb6_m1_w2
+uci -q delete mwan3.wanb6_m1_w3
+uci -q delete mwan3.wanb6_m2_w2
+uci -q delete mwan3.wan_only
+uci -q delete mwan3.wanb_only
+uci -q delete mwan3.balanced
+uci -q delete mwan3.wan_wanb
+uci -q delete mwan3.wanb_wan
+# wan interface
+uci set mwan3.wan=interface
+uci set mwan3.wan.enabled='1'
+uci set mwan3.wan.initial_state='online'
+uci set mwan3.wan.family='ipv4'
+uci set mwan3.wan.track_method='ping'
+uci set mwan3.wan.reliability='1'
+uci set mwan3.wan.count='1'
+uci set mwan3.wan.size='56'
+uci set mwan3.wan.max_ttl='60'
+uci set mwan3.wan.check_quality='0'
+uci set mwan3.wan.timeout='2'
+uci set mwan3.wan.interval='5'
+uci set mwan3.wan.failure_interval='5'
+uci set mwan3.wan.recovery_interval='5'
+uci set mwan3.wan.down='3'
+uci set mwan3.wan.up='3'
+uci add_list mwan3.wan.track_ip='8.8.8.8'
+uci add_list mwan3.wan.track_ip='1.1.1.1'
+# LTE interface
+uci set mwan3.LTE=interface
+uci set mwan3.LTE.enabled='1'
+uci set mwan3.LTE.initial_state='online'
+uci set mwan3.LTE.family='ipv4'
+uci set mwan3.LTE.track_method='ping'
+uci set mwan3.LTE.reliability='1'
+uci set mwan3.LTE.count='1'
+uci set mwan3.LTE.size='56'
+uci set mwan3.LTE.max_ttl='60'
+uci set mwan3.LTE.check_quality='0'
+uci set mwan3.LTE.timeout='2'
+uci set mwan3.LTE.interval='5'
+uci set mwan3.LTE.failure_interval='5'
+uci set mwan3.LTE.recovery_interval='5'
+uci set mwan3.LTE.down='3'
+uci set mwan3.LTE.up='3'
+uci add_list mwan3.LTE.track_ip='8.8.8.8'
+uci add_list mwan3.LTE.track_ip='1.1.1.1'
+# wlan interface (lowest priority)
+uci set mwan3.wlan=interface
+uci set mwan3.wlan.enabled='1'
+uci set mwan3.wlan.initial_state='online'
+uci set mwan3.wlan.family='ipv4'
+uci set mwan3.wlan.track_method='ping'
+uci set mwan3.wlan.reliability='1'
+uci set mwan3.wlan.count='1'
+uci set mwan3.wlan.size='56'
+uci set mwan3.wlan.max_ttl='60'
+uci set mwan3.wlan.check_quality='0'
+uci set mwan3.wlan.timeout='2'
+uci set mwan3.wlan.interval='5'
+uci set mwan3.wlan.failure_interval='5'
+uci set mwan3.wlan.recovery_interval='5'
+uci set mwan3.wlan.down='3'
+uci set mwan3.wlan.up='3'
+uci add_list mwan3.wlan.track_ip='8.8.8.8'
+uci add_list mwan3.wlan.track_ip='1.1.1.1'
+# members with metric (metric determines priority)
+uci set mwan3.wan_m1_w3=member
+uci set mwan3.wan_m1_w3.interface='wan'
+uci set mwan3.wan_m1_w3.metric='1'
+uci set mwan3.wan_m1_w3.weight='3'
+uci set mwan3.LTE_m2_w3=member
+uci set mwan3.LTE_m2_w3.interface='LTE'
+uci set mwan3.LTE_m2_w3.metric='2'
+uci set mwan3.LTE_m2_w3.weight='3'
+uci set mwan3.wlan_m3_w3=member
+uci set mwan3.wlan_m3_w3.interface='wlan'
+uci set mwan3.wlan_m3_w3.metric='3'
+uci set mwan3.wlan_m3_w3.weight='3'
+# Cfailover policy
+uci set mwan3.failover_policy=policy
+uci add_list mwan3.failover_policy.use_member='wan_m1_w3'
+uci add_list mwan3.failover_policy.use_member='LTE_m2_w3'
+uci add_list mwan3.failover_policy.use_member='wlan_m3_w3'
+#default rule
+uci set mwan3.default_rule_v4=rule
+uci set mwan3.default_rule_v4.dest_ip='0.0.0.0/0'
+uci set mwan3.default_rule_v4.use_policy='failover_policy'
+uci set mwan3.default_rule_v4.family='ipv4'
+uci commit mwan3
+
 # Set rpcd login 
 uci set rpcd.@login[0].username='admin'
 uci commit rpcd
@@ -64,3 +165,4 @@ uci commit rpcd
 /etc/init.d/network restart
 /etc/init.d/firewall restart
 /etc/init.d/rpcd restart
+/etc/init.d/mwan3 restart
