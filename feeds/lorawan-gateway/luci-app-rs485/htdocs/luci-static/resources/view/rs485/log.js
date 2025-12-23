@@ -25,7 +25,7 @@ return view.extend({
 	render: function(data) {
 		var logPayload = (data[1] || '').trim();
 
-		var m = new form.Map('rs485-module', _('Log Viewer'), _('View RS485 logs.'));
+		var m = new form.Map('rs485-module', _('Log Viewer'), _('View MQTT logs.'));
 
 		var logSection = m.section(form.NamedSection, 'ui', 'log', _('Log Messages'));
 		logSection.anonymous = true;

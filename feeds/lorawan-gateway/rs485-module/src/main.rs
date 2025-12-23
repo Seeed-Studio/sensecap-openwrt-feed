@@ -169,20 +169,20 @@ fn load_config_from_uci() -> Result<Config, Box<dyn std::error::Error + Send + S
     // Serial config
     let device = format!(
         "/dev/{}",
-        uci_get("rs485-module", "mqtt", "device").unwrap_or_else(|_| "ttyAMA2".to_string())
+        uci_get("rs485-module", "serial", "device").unwrap_or_else(|_| "ttyAMA2".to_string())
     );
-    let baudrate = uci_get("rs485-module", "mqtt", "baudrate")
+    let baudrate = uci_get("rs485-module", "serial", "baudrate")
         .ok()
         .and_then(|s| s.parse().ok())
         .unwrap_or(9600);
-    let databit = uci_get("rs485-module", "mqtt", "databit")
+    let databit = uci_get("rs485-module", "serial", "databit")
         .ok()
         .and_then(|s| s.parse().ok())
         .unwrap_or(8);
-    let stopbit = uci_get("rs485-module", "mqtt", "stopbit").unwrap_or_else(|_| "1".to_string());
-    let checkbit = uci_get("rs485-module", "mqtt", "checkbit").unwrap_or_else(|_| "none".to_string());
-    let flowcontrol = uci_get("rs485-module", "mqtt", "flowcontrol").unwrap_or_else(|_| "none".to_string());
-    let timeout = uci_get("rs485-module", "mqtt", "timeout")
+    let stopbit = uci_get("rs485-module", "serial", "stopbit").unwrap_or_else(|_| "1".to_string());
+    let checkbit = uci_get("rs485-module", "serial", "checkbit").unwrap_or_else(|_| "none".to_string());
+    let flowcontrol = uci_get("rs485-module", "serial", "flowcontrol").unwrap_or_else(|_| "none".to_string());
+    let timeout = uci_get("rs485-module", "serial", "timeout")
         .ok()
         .and_then(|s| s.parse().ok())
         .unwrap_or(1000);
