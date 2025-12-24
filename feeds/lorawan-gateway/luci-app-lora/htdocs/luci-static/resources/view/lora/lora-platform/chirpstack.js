@@ -13,6 +13,6 @@ return view.extend({
             var baseURL = window.location.hostname;
             return '<a href="http://' + baseURL + ':8080" target="_blank">' + _('Open ChirpStack Application Server') + '</a>';
         };
-        return loraSection;
+        return null;
     }
 });
