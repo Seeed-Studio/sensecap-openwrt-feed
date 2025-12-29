@@ -1,5 +1,7 @@
 use chrono::Local;
-use rumqttc::{AsyncClient, Event, Incoming, MqttOptions, QoS};
+use rumqttc::{AsyncClient, Event, Incoming, MqttOptions, QoS, Transport};
+use rumqttc::tokio_rustls::rustls::ClientConfig as RustlsClientConfig;
+use rustls_pemfile::{certs, pkcs8_private_keys};
 use serde::{Deserialize, Serialize};
 use std::fs::{File, OpenOptions};
 use std::io::Write;
@@ -21,6 +23,7 @@ struct Config {
 #[derive(Debug, Clone, PartialEq)]
 struct MqttConfig {
     enabled: bool,
+    transport: String,
     host: String,
     port: u16,
     username: Option<String>,
@@ -31,6 +34,11 @@ struct MqttConfig {
     downlink_topic: String,
     qos_level: QoS,
     reconnect_delay: u64,
+    auth_mode: String,
+    ca_cert: Option<String>,
+    client_cert: Option<String>,
+    client_key: Option<String>,
+    token: Option<String>,
 }
 
 // Serial Configuration Structure
@@ -148,8 +156,16 @@ fn load_config_from_uci() -> Result<Config, Box<dyn std::error::Error + Send + S
         .and_then(|s| s.parse().ok())
         .unwrap_or(30);
 
+    let transport = uci_get("rs485-module", "mqtt", "transport").unwrap_or_else(|_| "tcp".to_string());
+    let auth_mode = uci_get("rs485-module", "mqtt", "auth_mode").unwrap_or_else(|_| "none".to_string());
+    let ca_cert = uci_get("rs485-module", "mqtt", "ca_cert").ok();
+    let client_cert = uci_get("rs485-module", "mqtt", "client_cert").ok();
+    let client_key = uci_get("rs485-module", "mqtt", "client_key").ok();
+    let token = uci_get("rs485-module", "mqtt", "token").ok();
+
     let mqtt_config = MqttConfig {
         enabled,
+        transport,
         host,
         port,
         username,
@@ -164,6 +180,11 @@ fn load_config_from_uci() -> Result<Config, Box<dyn std::error::Error + Send + S
             _ => QoS::AtMostOnce, 
         },
         reconnect_delay,
+        auth_mode,
+        ca_cert,
+        client_cert,
+        client_key,
+        token,
     };
 
     // Serial config
@@ -229,9 +250,164 @@ fn setup_mqtt_client(
     // Set keep alive interval
     mqttoptions.set_keep_alive(Duration::from_secs(config.keepalive));
     
-    // Set credentials if provided
+    // Set basic credentials if provided
     if let (Some(username), Some(password)) = (&config.username, &config.password) {
         mqttoptions.set_credentials(username, password);
+    }
+
+    // Configure transport based on protocol
+    match config.transport.as_str() {
+        "ssl" | "tls" => {
+            // TLS/SSL configuration
+            let mut root_cert_store = rumqttc::tokio_rustls::rustls::RootCertStore::empty();
+            
+            // Configure based on auth mode
+            match config.auth_mode.as_str() {
+                "tls-server" => {
+                    // Server verification only - load CA cert
+                    if let Some(ca_cert) = &config.ca_cert {
+                        let ca_cert_bytes = ca_cert.as_bytes();
+                        let mut cursor = std::io::Cursor::new(ca_cert_bytes);
+                        for cert in certs(&mut cursor) {
+                            root_cert_store.add(cert?)?;
+                        }
+                    } else {
+                        // Use system CA certificates
+                        root_cert_store.extend(
+                            webpki_roots::TLS_SERVER_ROOTS.iter().cloned()
+                        );
+                    }
+                    
+                    let tls_config = RustlsClientConfig::builder()
+                        .with_root_certificates(root_cert_store)
+                        .with_no_client_auth();
+                    
+                    mqttoptions.set_transport(Transport::tls_with_config(tls_config.into()));
+                }
+                "mutual-tls" => {
+                    // Mutual TLS - load CA, client cert and key
+                    if let Some(ca_cert) = &config.ca_cert {
+                        let ca_cert_bytes = ca_cert.as_bytes();
+                        let mut cursor = std::io::Cursor::new(ca_cert_bytes);
+                        for cert in certs(&mut cursor) {
+                            root_cert_store.add(cert?)?;
+                        }
+                    } else {
+                        root_cert_store.extend(
+                            webpki_roots::TLS_SERVER_ROOTS.iter().cloned()
+                        );
+                    }
+                    
+                    // Load client certificate and private key
+                    if let (Some(client_cert_pem), Some(client_key_pem)) = (&config.client_cert, &config.client_key) {
+                        let cert_bytes = client_cert_pem.as_bytes();
+                        let key_bytes = client_key_pem.as_bytes();
+                        
+                        let mut cert_cursor = std::io::Cursor::new(cert_bytes);
+                        let certs: Vec<_> = certs(&mut cert_cursor).collect::<Result<_, _>>()?;
+                        
+                        let mut key_cursor = std::io::Cursor::new(key_bytes);
+                        let mut keys = pkcs8_private_keys(&mut key_cursor).collect::<Result<Vec<_>, _>>()?;
+                        
+                        if keys.is_empty() {
+                            return Err("No private key found".into());
+                        }
+                        
+                        let tls_config = RustlsClientConfig::builder()
+                            .with_root_certificates(root_cert_store)
+                            .with_client_auth_cert(certs, keys.remove(0).into())?;
+                        
+                        mqttoptions.set_transport(Transport::tls_with_config(tls_config.into()));
+                    } else {
+                        return Err("Mutual TLS requires both client certificate and private key".into());
+                    }
+                }
+                _ => {
+                    // Default TLS with system certs
+                    root_cert_store.extend(
+                        webpki_roots::TLS_SERVER_ROOTS.iter().cloned()
+                    );
+                    
+                    let tls_config = RustlsClientConfig::builder()
+                        .with_root_certificates(root_cert_store)
+                        .with_no_client_auth();
+                    
+                    mqttoptions.set_transport(Transport::tls_with_config(tls_config.into()));
+                }
+            }
+        }
+        "ws" => {
+            // WebSocket - construct URL format
+            let ws_url = format!("ws://{}:{}/mqtt", config.host, config.port);
+            mqttoptions = MqttOptions::new(&config.client_id, &ws_url, config.port);
+            mqttoptions.set_keep_alive(Duration::from_secs(config.keepalive));
+            if let Some(username) = &config.username {
+                mqttoptions.set_credentials(username, config.password.as_deref().unwrap_or(""));
+            }
+            mqttoptions.set_transport(Transport::Ws);
+        }
+        "wss" => {
+            // WebSocket Secure - construct URL format
+            let wss_url = format!("wss://{}:{}/mqtt", config.host, config.port);
+            mqttoptions = MqttOptions::new(&config.client_id, &wss_url, config.port);
+            mqttoptions.set_keep_alive(Duration::from_secs(config.keepalive));
+            if let Some(username) = &config.username {
+                mqttoptions.set_credentials(username, config.password.as_deref().unwrap_or(""));
+            }
+            
+            let mut root_cert_store = rumqttc::tokio_rustls::rustls::RootCertStore::empty();
+            
+            if let Some(ca_cert) = &config.ca_cert {
+                let ca_cert_bytes = ca_cert.as_bytes();
+                let mut cursor = std::io::Cursor::new(ca_cert_bytes);
+                for cert in certs(&mut cursor) {
+                    root_cert_store.add(cert?)?;
+                }
+            } else {
+                root_cert_store.extend(
+                    webpki_roots::TLS_SERVER_ROOTS.iter().cloned()
+                );
+            }
+            
+            // Check auth mode for WSS
+            let tls_config = match config.auth_mode.as_str() {
+                "mutual-tls" => {
+                    // Mutual TLS for WebSocket Secure
+                    if let (Some(client_cert_pem), Some(client_key_pem)) = (&config.client_cert, &config.client_key) {
+                        let cert_bytes = client_cert_pem.as_bytes();
+                        let key_bytes = client_key_pem.as_bytes();
+                        
+                        let mut cert_cursor = std::io::Cursor::new(cert_bytes);
+                        let certs: Vec<_> = certs(&mut cert_cursor).collect::<Result<_, _>>()?;
+                        
+                        let mut key_cursor = std::io::Cursor::new(key_bytes);
+                        let mut keys = pkcs8_private_keys(&mut key_cursor).collect::<Result<Vec<_>, _>>()?;
+                        
+                        if keys.is_empty() {
+                            return Err("No private key found".into());
+                        }
+                        
+                        RustlsClientConfig::builder()
+                            .with_root_certificates(root_cert_store)
+                            .with_client_auth_cert(certs, keys.remove(0).into())?
+                    } else {
+                        return Err("Mutual TLS requires both client certificate and private key".into());
+                    }
+                }
+                _ => {
+                    // Default: server verification only
+                    RustlsClientConfig::builder()
+                        .with_root_certificates(root_cert_store)
+                        .with_no_client_auth()
+                }
+            };
+            
+            mqttoptions.set_transport(Transport::wss_with_config(tls_config.into()));
+        }
+        "tcp" | _ => {
+            // Plain TCP (default)
+            mqttoptions.set_transport(Transport::Tcp);
+        }
     }
     
     // Create AsyncClient and EventLoop

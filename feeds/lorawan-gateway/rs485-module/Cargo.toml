@@ -1,14 +1,16 @@
 [package]
-    name = "rs485-module"
-    version = "1.0.0"
-    edition = "2021"
-    license = "MIT"
-    description = "RS485 to MQTT Bridge"
+name = "rs485-module"
+version = "1.0.0"
+edition = "2021"
+license = "MIT"
+description = "RS485 to MQTT Bridge"
 
 [dependencies]
-    tokio = { version = "1.41", features = ["full"] }
-    tokio-serial = "5.4"
-    rumqttc = "0.24"
-    serde = { version = "1.0", features = ["derive"] }
-    serde_json = "1.0"
-    chrono = "0.4"
+tokio = { version = "1.41", features = ["full"] }
+tokio-serial = "5.4"
+rumqttc = { version = "0.24", features = ["websocket", "use-rustls"] }
+rustls-pemfile = "2.1"
+webpki-roots = "0.26"
+serde = { version = "1.0", features = ["derive"] }
+serde_json = "1.0"
+chrono = "0.4"

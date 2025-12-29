@@ -110,22 +110,16 @@ return view.extend({
         o.value("token", _("Token Authentication"));
         o.default = "none";
 
-        o = s.option(form.TextValue, "ca_cert", _("CA Certificate"));
-        o.rows = 6;
-        o.wrap = "off";
+        o = s.option(form.FileUpload, "ca_cert", _("CA Certificate"));
         o.optional = true;
         o.depends("auth_mode", "tls-server");
         o.depends("auth_mode", "mutual-tls");
 
-        o = s.option(form.TextValue, "client_cert", _("Client Certificate"));
-        o.rows = 6;
-        o.wrap = "off";
+        o = s.option(form.FileUpload, "client_cert", _("Client Certificate"));
         o.optional = true;
         o.depends("auth_mode", "mutual-tls");
 
-        o = s.option(form.TextValue, "client_key", _("Client Private Key"));
-        o.rows = 6;
-        o.wrap = "off";
+        o = s.option(form.FileUpload, "client_key", _("Client Private Key"));
         o.optional = true;
         o.depends("auth_mode", "mutual-tls");
 
