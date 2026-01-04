@@ -210,6 +210,13 @@ start_service() {
 	mkdir -p /tmp/packetforwarder/
 
 	config_load lora
+	
+	config_get enabled radio enabled 0
+	[ "$enabled" -ne 1 ] && {
+		logger "radio disabled !"
+		return
+	}
+
 	config_get platform radio platform "packet_forwarder"
 	[ "$platform" = "basic_station" ] && {
 		logger "mode: basic_station; lora_pkt_fwd exit !"
