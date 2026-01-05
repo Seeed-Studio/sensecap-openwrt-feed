@@ -1,26 +1,34 @@
 'use strict';
 'require view';
 'require form';
-'require uci';
 'require fs';
+'require ui';
+'require uci';
+'require rpc';
+
+var callFileRead = rpc.declare({
+    object: 'file',
+    method: 'read',
+    params: ['path'],
+    expect: { data: '' }
+});
 
 return view.extend({
     load: function() {
-        return uci.load('rs485-module');
+        return Promise.all([
+            L.resolveDefault(fs.stat('/tmp/rs485'), null)
+        ]);
     },
 
-    render: function() {
-        var m = new form.Map('rs485-module', _('RS485 Protocol Settings'), 
-            _('Configure RS485 protocol parameters'));
-        
-        var s = m.section(form.NamedSection, 'protocol', 'protocol');
-        s.addremove = false;
+    render: function(data) {
+        var m, s, o;
 
-        var o = s.option(form.DummyValue, "_header");
-        o.rawhtml = true;
-        o.cfgvalue = function() {
-            return '<h3 style="margin-top:0;padding-top:10px;">Protocol Configuration</h3>';
-        };
+        m = new form.Map('rs485-module', _('RS485 Protocol Configuration'),
+            _('Configure RS485 Modbus protocol settings'));
+
+        s = m.section(form.TypedSection, 'protocol', _('Protocol Settings'));
+        s.anonymous = true;
+        s.addremove = false;
 
         o = s.option(form.Flag, 'enabled', _('Enable Protocol Processing'));
         o.default = '0';
@@ -28,114 +36,106 @@ return view.extend({
 
         o = s.option(form.ListValue, 'type', _('Protocol Type'));
         o.value('modbus-rtu', 'Modbus RTU');
-        o.value('bacnet-mstp', 'BACnet MS/TP');
-        o.value('custom', _('Custom Protocol'));
         o.default = 'modbus-rtu';
 
-        // Modbus RTU Settings Header
-        o = s.option(form.DummyValue, "_modbus_header");
-        o.rawhtml = true;
-        o.cfgvalue = function() {
-            return '<h3 style="margin-top:20px;padding-top:10px;">Modbus RTU Settings</h3>';
-        };
-        o.depends('type', 'modbus-rtu');
-
-        o = s.option(form.Value, 'device_address', _('Device Address'));
+        o = s.option(form.Value, 'device_address', _('Device Address (Slave ID)'));
         o.datatype = 'range(1,247)';
         o.placeholder = '1';
         o.default = '1';
-        o.depends('type', 'modbus-rtu');
 
         o = s.option(form.ListValue, 'function_code', _('Function Code'));
-        o.value('01', '01 - Read Coils');
-        o.value('02', '02 - Read Discrete Inputs');
         o.value('03', '03 - Read Holding Registers');
         o.value('04', '04 - Read Input Registers');
-        o.value('05', '05 - Write Single Coil');
-        o.value('06', '06 - Write Single Register');
-        o.value('15', '15 - Write Multiple Coils');
-        o.value('16', '16 - Write Multiple Registers');
+        o.value('01', '01 - Read Coils');
+        o.value('02', '02 - Read Discrete Inputs');
         o.default = '03';
-        o.depends('type', 'modbus-rtu');
 
         o = s.option(form.Value, 'register_address', _('Register Address'));
-        o.datatype = 'uinteger';
+        o.datatype = 'range(0,65535)';
         o.placeholder = '40001';
         o.default = '40001';
-        o.depends('type', 'modbus-rtu');
 
-        o = s.option(form.Value, 'data_length', _('Data Length'));
+        o = s.option(form.Value, 'data_length', _('Data Length (Words/Bits)'));
         o.datatype = 'range(1,125)';
         o.placeholder = '10';
         o.default = '10';
-        o.depends('type', 'modbus-rtu');
 
-        // Advanced Settings Header
-        o = s.option(form.DummyValue, "_advanced_header");
-        o.rawhtml = true;
-        o.cfgvalue = function() {
-            return '<h3 style="margin-top:20px;padding-top:10px;">Advanced</h3>';
-        };
-
-        o = s.option(form.Value, 'poll_interval', _('Polling Interval (ms)'));
-        o.datatype = 'range(100,60000)';
-        o.placeholder = '1000';
-        o.default = '1000';
-
-        o = s.option(form.Flag, 'enable_crc', _('Enable CRC Check'));
-        o.default = '1';
-
-        o = s.option(form.Button, '_show_frame_btn', _('Show Frame Data'));
+        o = s.option(form.Button, '_show_frame_btn', _('Read Data'));
         o.inputtitle = _('Read Data');
         o.inputstyle = 'apply';
-        o.onclick = L.bind(function(ev) {
+        o.onclick = L.bind(function (ev) {
             var btn = ev.target;
-            btn.disabled = true;
-            btn.innerText = _('Reading...');
+            var resultArea = document.getElementById('modbus_result');
             
-            return L.resolveDefault(fs.exec('/bin/ubus', ['call', 'sensecap', 'rs485_read_modbus']))
-                .then(function(res) {
-                    if (res && res.code === 0) {
-                        try {
-                            var result = JSON.parse(res.stdout);
-                            var resultArea = document.getElementById('modbus_result');
-                            if (result.success) {
-                                if (resultArea) {
-                                    resultArea.value = result.data;
-                                    resultArea.style.color = '#000';
-                                }
-                            } else {
-                                if (resultArea) {
-                                    resultArea.value = 'Error: ' + (result.error || 'Unknown error');
-                                    resultArea.style.color = '#d00';
-                                }
-                            }
-                        } catch(e) {
-                            var resultArea = document.getElementById('modbus_result');
-                            if (resultArea) {
-                                resultArea.value = 'Failed to parse response: ' + e.message;
-                                resultArea.style.color = '#d00';
-                            }
-                        }
-                    } else {
-                        var resultArea = document.getElementById('modbus_result');
-                        if (resultArea) {
-                            resultArea.value = 'Failed to execute command';
-                            resultArea.style.color = '#d00';
-                        }
-                    }
-                })
-                .catch(function(err) {
-                    var resultArea = document.getElementById('modbus_result');
+            // Check if protocol is enabled first
+            return uci.load('rs485-module').then(function() {
+                var protocolEnabled = uci.get('rs485-module', 'protocol', 'enabled');
+                
+                if (protocolEnabled !== '1') {
                     if (resultArea) {
-                        resultArea.value = 'Error: ' + err.message;
+                        resultArea.value = 'Error: Protocol processing is not enabled. Please enable it and save first.';
                         resultArea.style.color = '#d00';
                     }
-                })
-                .finally(function() {
-                    btn.disabled = false;
-                    btn.innerText = _('Read Data');
-                });
+                    return Promise.reject('Protocol not enabled');
+                }
+                
+                btn.disabled = true;
+                btn.innerText = _('Reading...');
+                
+                // Clean up old files first
+                return fs.exec('/bin/sh', ['-c', 'rm -f /tmp/rs485/modbus_read /tmp/rs485/modbus_result'])
+                    .then(function() {
+                        // Create trigger file
+                        return fs.exec('/bin/sh', ['-c', 'mkdir -p /tmp/rs485 && touch /tmp/rs485/modbus_read']);
+                    })
+                    .then(function () {
+                        // Poll for result file (max 5 seconds)
+                        var pollCount = 0;
+                        var pollInterval = setInterval(function () {
+                            pollCount++;
+
+                            L.resolveDefault(fs.read('/tmp/rs485/modbus_result'))
+                                .then(function (content) {
+                                    if (content) {
+                                        clearInterval(pollInterval);
+                                        if (resultArea) {
+                                            if (content.startsWith('Error:')) {
+                                                resultArea.value = content;
+                                                resultArea.style.color = '#d00';
+                                            } else {
+                                                resultArea.value = content;
+                                                resultArea.style.color = '#000';
+                                            }
+                                        }
+                                        btn.disabled = false;
+                                        btn.innerText = _('Read Data');
+                                        // Clean up files
+                                        fs.exec('/bin/sh', ['-c', 'rm -f /tmp/rs485/modbus_read /tmp/rs485/modbus_result']);
+                                    }
+                                })
+                                .catch(function (err) {
+                                    if (pollCount >= 50) {
+                                        clearInterval(pollInterval);
+                                        if (resultArea) {
+                                            resultArea.value = 'Timeout: No response from Modbus device';
+                                            resultArea.style.color = '#d00';
+                                        }
+                                        btn.disabled = false;
+                                        btn.innerText = _('Read Data');
+                                        // Clean up files
+                                        fs.exec('/bin/sh', ['-c', 'rm -f /tmp/rs485/modbus_read /tmp/rs485/modbus_result']);
+                                    }
+                                });
+                        }, 100);
+                    });
+            }).catch(function(err) {
+                if (resultArea) {
+                    resultArea.value = 'Error: ' + (err.message || err);
+                    resultArea.style.color = '#d00';
+                }
+                btn.disabled = false;
+                btn.innerText = _('Read Data');
+            });
         }, this);
 
         // Result display area

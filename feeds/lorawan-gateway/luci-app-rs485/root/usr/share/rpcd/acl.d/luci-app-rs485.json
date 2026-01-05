@@ -5,11 +5,18 @@
 			"file": {
 				"/tmp/rs485/log": [
 					"read"
+				],
+                                "/tmp/rs485/modbus_result": [
+					"read"
 				]
 			},
 			"ubus": {
 				"uci": [
 					"get"
+				],
+                                "file": [
+                                        "exec",
+                                        "read"
 				]
 			},
 			"uci": [
@@ -20,11 +27,20 @@
 			"ubus": {
 				"uci": [
 					"set"
+				],
+                                "file": [
+                                        "exec",
+                                        "write"
 				]
 			},
 			"uci": [
 				"rs485-module"
-			]
+			],
+                        "file": {
+                                "/tmp/rs485/*": [
+                                        "write"
+                                ]
+			}
 		}
 	}
 }
