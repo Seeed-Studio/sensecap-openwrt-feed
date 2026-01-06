@@ -5,7 +5,18 @@ START=99
 
 PROG=/usr/bin/chirpstack-gateway-bridge
 
+update_config() {
+	local freq_name
+	freq_name=$(uci -q get lora.@radio[0].freq_plan)
+	
+	[ -z "$freq_name" ] && logger "chirpstack-gateway-bridge: freq_plan is not set, using default topic templates" && return
+	logger "chirpstack-gateway-bridge: update topic templates with freq_plan: $freq_name"
+	sed -i "s|event_topic_template=\".*/gateway/|event_topic_template=\"$freq_name/gateway/|" /etc/config/chirpstack-gateway-bridge
+	sed -i "s|command_topic_template=\".*/gateway/|command_topic_template=\"$freq_name/gateway/|" /etc/config/chirpstack-gateway-bridge
+}
+
 start_service() {
+	update_config
 	procd_open_instance
 	procd_set_param command "$PROG" --config /etc/config/chirpstack-gateway-bridge
 	procd_set_param respawn 3600 5 -1
@@ -13,6 +24,11 @@ start_service() {
 	procd_close_instance
 }
 
+service_triggers() {
+	procd_add_reload_trigger "lora"
+}
+
 reload_service() {
-	procd_send_signal chirpstack-gateway-bridge
+	# procd_send_signal chirpstack-gateway-bridge
+	restart "$@"
 }

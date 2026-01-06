@@ -34,6 +34,9 @@
                 ],
                 "/etc/init.d/station": [
                     "exec"
+                ],
+                "/etc/init.d/chirpstack-gateway-bridge": [
+                    "exec"
                 ]
             },
             "ubus": {
