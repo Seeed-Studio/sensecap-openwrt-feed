@@ -34,6 +34,8 @@ parse_gateway() {
 	json_add_int 'keepalive_interval' "$val"
 	config_get val "$section" stat_interval 30
 	json_add_int 'stat_interval' "$val"
+	config_get val "$section" stat_report_interval_multiple 1
+	json_add_int 'stat_report_interval_multiple' "$val"
 	config_get val "$section" push_timeout_ms 950
 	json_add_int 'push_timeout_ms' "$val"
 	config_get_bool val "$section" forward_crc_valid 1
@@ -82,6 +84,7 @@ parse_chirpstack_gateway() {
 	json_add_int 'serv_port_down' "1700"
 	json_add_int 'keepalive_interval' "5"
 	json_add_int 'stat_interval' "30"
+	json_add_int 'stat_report_interval_multiple' "1"
 	json_add_int 'push_timeout_ms' "950"
 	json_add_boolean 'forward_crc_valid' "1"
 	json_add_boolean 'forward_crc_error' "0"

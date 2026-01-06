@@ -50,6 +50,10 @@ return view.extend({
         stat_interval.default = "30";
         stat_interval.datatype = "uinteger";
 
+        var stat_report_interval_multiple = s.taboption("interval", form.Value, "stat_report_interval_multiple", _("Statistic Report Interval"), _("Statistic package reporting interval multiple configuration. Report Interval =  Multiple * Statistic Interval"))
+        stat_report_interval_multiple.default = "1";
+        stat_report_interval_multiple.datatype = "uinteger";
+
         // beacon tab
         var beacon_period_validate = function (section_id, value) {
             if (value > 0 && value < 6) {
