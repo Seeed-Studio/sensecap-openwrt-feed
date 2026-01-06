@@ -237,6 +237,11 @@ start_service() {
 	procd_close_instance
 }
 
-stop_service() {
-	logger "lora_pkt_fwd: Stop"
+service_triggers() {
+	procd_add_reload_trigger "packetforwarder"
+	procd_add_reload_trigger "lora"
+}
+
+reload_service() {
+	restart "$@"
 }
