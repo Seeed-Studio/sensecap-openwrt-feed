@@ -60,6 +60,7 @@ struct ProtocolConfig {
     function_code: u8,
     register_address: u16,
     data_length: u16,
+    write_value: String,
 }
 
 // MQTT Message Structures
@@ -251,6 +252,7 @@ fn load_config_from_uci() -> Result<Config, Box<dyn std::error::Error + Send + S
         function_code,
         register_address,
         data_length,
+        write_value: uci_get("rs485-module", "protocol", "write_value").unwrap_or_else(|_| "0".to_string()),
     };
 
     Ok(Config {
@@ -461,6 +463,51 @@ async fn read_modbus_data(
             let data = ctx.read_discrete_inputs(addr, config.data_length as u16).await??;
             Ok(format!("Coils: [{}]", 
                 data.iter().map(|v| if *v { "1" } else { "0" }).collect::<Vec<_>>().join(", ")))
+        }
+        5 => {
+            // Write Single Coil
+            let value = config.write_value.trim().parse::<u16>().unwrap_or(0) != 0;
+            ctx.write_single_coil(addr, value).await??;
+            Ok(format!("Write Single Coil: address={}, value={}", addr, if value { "ON" } else { "OFF" }))
+        }
+        6 => {
+            // Write Single Register
+            let value = if config.write_value.trim().starts_with("0x") || config.write_value.trim().starts_with("0X") {
+                u16::from_str_radix(&config.write_value.trim()[2..], 16).unwrap_or(0)
+            } else {
+                config.write_value.trim().parse::<u16>().unwrap_or(0)
+            };
+            ctx.write_single_register(addr, value).await??;
+            Ok(format!("Write Single Register: address={}, value=0x{:04X}", addr, value))
+        }
+        15 => {
+            let values: Vec<bool> = config.write_value.trim().split(',')
+                .filter_map(|s| s.trim().parse::<u16>().ok())
+                .map(|v| v != 0)
+                .collect();
+            if values.is_empty() {
+                return Err("No valid values provided for Write Multiple Coils".into());
+            }
+            ctx.write_multiple_coils(addr, &values).await??;
+            Ok(format!("Write Multiple Coils: address={}, count={}", addr, values.len()))
+        }
+        16 => {
+            // Write Multiple Registers
+            let values: Vec<u16> = config.write_value.trim().split(',')
+                .filter_map(|s| {
+                    let s = s.trim();
+                    if s.starts_with("0x") || s.starts_with("0X") {
+                        u16::from_str_radix(&s[2..], 16).ok()
+                    } else {
+                        s.parse::<u16>().ok()
+                    }
+                })
+                .collect();
+            if values.is_empty() {
+                return Err("No valid values provided for Write Multiple Registers".into());
+            }
+            ctx.write_multiple_registers(addr, &values).await??;
+            Ok(format!("Write Multiple Registers: address={}, count={}", addr, values.len()))
         }
         _ => {
             Err(format!("Unsupported function code: {}", config.function_code).into())
@@ -746,6 +793,45 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                 logger.log("MQTT disabled");
                 mqtt_state = "not_connect";
             }
+        }
+
+        // Check for modbus_write trigger file (works regardless of MQTT state)
+        let trigger_path = "/tmp/rs485/modbus_write";
+        let result_path = "/tmp/rs485/modbus_result";
+        
+        if Path::new(trigger_path).exists() {
+            let write_future = read_modbus_data(&mut modbus_ctx, &config.protocol, &logger);
+            let timeout_future = tokio::time::sleep(Duration::from_secs(3));
+            
+            let modbus_result = tokio::select! {
+                result = write_future => Some(result),
+                _ = timeout_future => {
+                    logger.log("Modbus write operation timeout (3 seconds)");
+                    None
+                }
+            };
+            
+            match modbus_result {
+                Some(Ok(data)) => {
+                    logger.log(&format!("Modbus write successful: {}", data));
+                    if let Err(e) = std::fs::write(result_path, &data) {
+                        logger.log(&format!("Failed to write result file: {}", e));
+                    }
+                }
+                Some(Err(e)) => {
+                    let error_msg = format!("Error: Modbus write failed - {}", e);
+                    logger.log(&error_msg);
+                    let _ = std::fs::write(result_path, error_msg);
+                }
+                None => {
+                    let error_msg = "Error: Modbus write timeout";
+                    logger.log(error_msg);
+                    let _ = std::fs::write(result_path, error_msg);
+                }
+            }
+            
+            // Remove trigger file
+            let _ = std::fs::remove_file(trigger_path);
         }
 
         sleep(Duration::from_millis(100)).await;
