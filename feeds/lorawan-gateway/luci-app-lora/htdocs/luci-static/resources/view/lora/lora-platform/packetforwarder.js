@@ -16,6 +16,7 @@ return view.extend({
         s.tab('beacon', _('Beacon Settings'));
         s.tab('gps', _('GPS Information'));
         s.tab('forward', _('Forward Rules'));
+        s.tab('packet_filter', _('Packet Filter'));
 
         // server
         var server = s.taboption("general", form.Value, "server_address", _("Server Address"));
@@ -122,6 +123,24 @@ return view.extend({
         forward_crc_disabled.value("true", "True")
         forward_crc_disabled.value("false", "False")
         forward_crc_disabled.default = "false"
+
+        // packet_filter tab
+        var whitelist_enable = s.taboption("packet_filter", form.Flag, "whitelist_enable", _("Enable White List Mode"),_("OUI filters Join packets; NetID and DevAddr filter uplink packets, they are \"OR\" filters"))
+        whitelist_enable.default = 0
+
+        var whitelist_ouis = s.taboption("packet_filter", form.DynamicList, "whitelist_ouis", _("OUI List"), _("Please enter three-byte hexadecimal, eg: SenseCAP Node OUI is '2CF7F1'.Note: Maximum 16 items"))
+        whitelist_ouis.datatype = "hexstring"
+    
+        var whitelist_netids = s.taboption("packet_filter", form.DynamicList, "whitelist_netids", _("Network ID List"), _("Please enter three-byte hexadecimal, eg: SenseCAP TTN NetID is '000013'. Note: Maximum 16 items"))
+        whitelist_netids.datatype = "hexstring"
+
+        var whitelist_devaddr_min = s.taboption("packet_filter", form.Value, "whitelist_devaddr_min", _("Devaddr Min"), _("Please enter four-byte hexadecimal, eg: SenseCAP TTN Devaddr min is '27000000'"))
+        whitelist_devaddr_min.default = "00000000"
+        whitelist_devaddr_min.datatype = "hexstring"
+
+        var whitelist_devaddr_max = s.taboption("packet_filter", form.Value, "whitelist_devaddr_max", _("Devaddr Max"),_("Please enter four-byte hexadecimal, eg: SenseCAP TTN Devaddr min is '2701FFFF'"))
+        whitelist_devaddr_max.default = "00000000"
+        whitelist_devaddr_max.datatype = "hexstring"
 
         return mMap;
     }

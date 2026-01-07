@@ -1,0 +1,230 @@
+From f546f4ec25d1e954dbf0c4c8933d28c1655f9646 Mon Sep 17 00:00:00 2001
+From: qian <ruiqian.tang@seeed.cc>
+Date: Wed, 7 Jan 2026 10:47:55 +0800
+Subject: [PATCH] add white list.
+
+---
+ src-linux/sys_linux.c | 66 +++++++++++++++++++++++++++++++++++++++
+ src-linux/sys_linux.h |  8 +++++
+ src/kwlist.txt        |  5 +++
+ src/lora.c            | 72 ++++++++++++++++++++++++++++++++++++++++++-
+ 4 files changed, 150 insertions(+), 1 deletion(-)
+
+diff --git a/src-linux/sys_linux.c b/src-linux/sys_linux.c
+index 38b3fa3..b049414 100644
+--- a/src-linux/sys_linux.c
++++ b/src-linux/sys_linux.c
+@@ -793,6 +793,62 @@ static int parseStationConf () {
+                     setWebDir(uj_str(&D), filename);
+                     break;
+                 }
++                case J_whitelist_enable: {
++                    whitelist_enable = uj_bool(&D) ? 1 : 0;
++                    break;
++                }
++                case J_whitelist_ouis: {
++                    if( !uj_null(&D) ) {
++                        int oui_cnt = 0;
++                        uj_enterArray(&D);
++                        while( uj_nextSlot(&D) >= 0 ) {
++                            char *oui = uj_str(&D);
++                            whitelist_ouis[oui_cnt] = ((int) strtol(oui, NULL, 16)) & 0x00FFFFFF;
++                            oui_cnt++;
++                            if( oui_cnt >= 16 ) {
++                                break;
++                            }
++                        }
++                        uj_exitArray(&D);
++                        whitelist_ouis_count = oui_cnt;
++                    } else {
++                        whitelist_ouis_count = 0;
++                    }
++                    break;
++                }
++                case J_whitelist_netids: {
++                    if( !uj_null(&D) ) {
++                        int netid_cnt = 0;
++                        uj_enterArray(&D);
++                        while( uj_nextSlot(&D) >= 0 ) {
++                            char *netid = uj_str(&D);
++                            whitelist_netids[netid_cnt] = ((int) strtol(netid, NULL, 16)) & 0x00FFFFFF;
++                            netid_cnt++;
++                            if( netid_cnt >= 16 ) {
++                                break;
++                            }
++                        }
++                        uj_exitArray(&D);
++                        whitelist_netids_count = netid_cnt;
++                    } else {
++                        whitelist_netids_count = 0;
++                    }
++                    break;
++                }
++                case J_whitelist_devaddr_min: {
++                    char *str = uj_str(&D);
++                    if(str){
++                        whitelist_devaddr_min = (uint32_t) strtoll(str, NULL, 16);
++                    }
++                    break;
++                }
++                case J_whitelist_devaddr_max: {
++                    char *str = uj_str(&D);
++                    if(str){
++                        whitelist_devaddr_max = (uint32_t) strtoll(str, NULL, 16);
++                    }
++                    break;
++                }
+                 default: {
+                     dbuf_t b = uj_skipValue(&D);
+                     int err = s2conf_set(filename, D.field.name, rt_strdupn(b.buf, b.bufsize));
+@@ -811,6 +867,16 @@ static int parseStationConf () {
+         }
+         }
+     }
++    LOG(MOD_SYS|INFO, "whitelist enable: %d", whitelist_enable);
++    for (uint8_t i = 0; i < whitelist_netids_count; i++) {
++        LOG(MOD_SYS|INFO, "whitelist NetID%d: 0x%06X\n",i, whitelist_netids[i]);
++    }
++    for (uint8_t i = 0; i < whitelist_ouis_count; i++) {
++        LOG(MOD_SYS|INFO, "whitelist OUI%d: 0x%06X\n",i, whitelist_ouis[i]);
++    }
++    LOG(MOD_SYS|INFO, "whitelist_devaddr_min:  0x%x\n", whitelist_devaddr_min);
++    LOG(MOD_SYS|INFO, "whitelist_devaddr_max:  0x%x\n", whitelist_devaddr_max);
++
+     uj_exitObject(&D);
+     uj_assertEOF(&D);
+     free(jbuf.buf);
+diff --git a/src-linux/sys_linux.h b/src-linux/sys_linux.h
+index 048cf36..6a1ee42 100644
+--- a/src-linux/sys_linux.h
++++ b/src-linux/sys_linux.h
+@@ -43,6 +43,14 @@ struct logfile {
+     int   rotate;
+ };
+ 
++extern bool whitelist_enable;
++extern uint8_t whitelist_netids_count;
++extern uint32_t whitelist_netids[16];
++extern uint8_t whitelist_ouis_count;
++extern uint32_t whitelist_ouis[16];
++extern uint32_t whitelist_devaddr_min;
++extern uint32_t whitelist_devaddr_max;
++
+ extern str_t  sys_slaveExec;  // template to start slave processes
+ 
+ void     sys_startLogThread ();
+diff --git a/src/kwlist.txt b/src/kwlist.txt
+index 7516d92..b57dd4f 100644
+--- a/src/kwlist.txt
++++ b/src/kwlist.txt
+@@ -247,3 +247,8 @@ wifi_scan
+ wifi_ssid
+ wifi_pass
+ cups_uri
++whitelist_enable
++whitelist_ouis
++whitelist_netids
++whitelist_devaddr_min
++whitelist_devaddr_max
+diff --git a/src/lora.c b/src/lora.c
+index 4d63baa..5501841 100644
+--- a/src/lora.c
++++ b/src/lora.c
+@@ -82,6 +82,28 @@
+ uL_t* s2e_joineuiFilter;
+ u4_t  s2e_netidFilter[4] = { 0xffFFffFF, 0xffFFffFF, 0xffFFffFF, 0xffFFffFF };
+ 
++/* whitelists */
++bool whitelist_enable= false;
++uint8_t whitelist_netids_count = 0;
++uint32_t whitelist_netids[16];
++uint8_t whitelist_ouis_count = 0;
++uint32_t whitelist_ouis[16];
++uint32_t whitelist_devaddr_min = 0;
++uint32_t whitelist_devaddr_max = 0;
++
++static uint32_t get_netid(uint32_t devaddr) {
++
++    uint8_t nwkid_bits_array[] = { 6, 6, 9, 11, 12, 13, 15, 17 };
++    uint8_t type_id = __builtin_clz(~devaddr);
++    if (type_id > 7) return 0;
++
++    uint8_t nwkid_bits = nwkid_bits_array[type_id];
++    uint32_t nwkid = devaddr >> (31 - type_id - nwkid_bits);
++    nwkid &= ((1 << nwkid_bits) - 1);
++
++    return (type_id << 21) | nwkid;
++}
++/* whitelists end */
+ 
+ int s2e_parse_lora_frame (ujbuf_t* buf, const u1_t* frame , int len, dbuf_t* lbuf) {
+     if( len == 0 ) {
+@@ -120,9 +142,33 @@ int s2e_parse_lora_frame (ujbuf_t* buf, const u1_t* frame , int len, dbuf_t* lbu
+             return 0;
+           out1:;
+         }
++
++        /* whitelists handle */
++        uL_t deveui = rt_rlsbf8(&frame[OFF_deveui]);
++
++        bool found = true;
++        uint32_t oui = deveui >> 40;
++        if( whitelist_enable ) {
++            found = false;
++            for (uint8_t i=0; i<whitelist_ouis_count; i++) {
++                if (oui == whitelist_ouis[i]) {
++                    found = true;
++                    break;
++                }
++            }
++        } else {
++            found = true;
++        }
++
++        if (!found) {
++            printf("OUI %06X not in the whitelist, filter out Join Request\n", oui);
++            return 0;
++        }
++        /* whitelists handle end */
++        
+         str_t msgtype = (ftype == FRMTYPE_JREQ ? "jreq" : "rejoin");
+         u1_t  mhdr = frame[OFF_mhdr];
+-        uL_t  deveui = rt_rlsbf8(&frame[OFF_deveui]);
++        // uL_t  deveui = rt_rlsbf8(&frame[OFF_deveui]);
+         u2_t  devnonce = rt_rlsbf2(&frame[OFF_devnonce]);
+         s4_t  mic = (s4_t)rt_rlsbf4(&frame[len-4]);
+         uj_encKVn(buf,
+@@ -148,6 +194,30 @@ int s2e_parse_lora_frame (ujbuf_t* buf, const u1_t* frame , int len, dbuf_t* lbu
+         xprintf(lbuf, "DevAddr=%X with NetID=%d filtered", devaddr, netid);
+         return 0;
+     }
++
++    /* whitelists handle */
++    bool found = true;
++    uint32_t NetID = get_netid(devaddr);
++    if( whitelist_enable ) {
++        found = false;
++        for (uint8_t i=0; i<whitelist_netids_count; i++) {
++            if (NetID == whitelist_netids[i]) {
++                found = true;
++                break;
++            }
++        }
++        if (devaddr >= whitelist_devaddr_min && devaddr <= whitelist_devaddr_max) {
++            found = true;
++        }
++    } else {
++        found = true;
++    }
++    if (!found) {
++        printf("NetID %06X (DevAddr=%X)not in the whitelist, skipping packet\n", NetID, devaddr);
++        return 0;
++    }
++    /* whitelists handle end */
++
+     u1_t  mhdr  = frame[OFF_mhdr];
+     u1_t  fctrl = frame[OFF_fctrl];
+     u2_t  fcnt  = rt_rlsbf2(&frame[OFF_fcnt]);
+-- 
+2.43.0
+

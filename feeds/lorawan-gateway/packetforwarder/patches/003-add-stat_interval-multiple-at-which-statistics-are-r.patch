@@ -1,0 +1,58 @@
+From ef791acea71ce5ca828fe916b9eaf8a338461cf4 Mon Sep 17 00:00:00 2001
+From: qian <ruiqian.tang@seeed.cc>
+Date: Wed, 7 Jan 2026 10:25:43 +0800
+Subject: [PATCH] add: stat_interval multiple at which statistics are reported
+
+---
+ packet_forwarder/src/lora_pkt_fwd.c | 14 +++++++++++++-
+ 1 file changed, 13 insertions(+), 1 deletion(-)
+
+diff --git a/packet_forwarder/src/lora_pkt_fwd.c b/packet_forwarder/src/lora_pkt_fwd.c
+index 7530edb..46484be 100644
+--- a/packet_forwarder/src/lora_pkt_fwd.c
++++ b/packet_forwarder/src/lora_pkt_fwd.c
+@@ -152,6 +152,7 @@ static int keepalive_time = DEFAULT_KEEPALIVE; /* send a PULL_DATA request every
+ 
+ /* statistics collection configuration variables */
+ static unsigned stat_interval = DEFAULT_STAT; /* time interval (in sec) at which statistics are collected and displayed */
++static unsigned stat_report_interval_multiple = 1; /* stat_interval multiple at which statistics are reported */
+ 
+ /* gateway <-> MAC protocol variables */
+ static uint32_t net_mac_h; /* Most Significant Nibble, network order */
+@@ -1083,6 +1084,11 @@ static int parse_gateway_configuration(const char * conf_file) {
+         stat_interval = (unsigned)json_value_get_number(val);
+         MSG("INFO: statistics display interval is configured to %u seconds\n", stat_interval);
+     }
++    val = json_object_get_value(conf_obj, "stat_report_interval_multiple");
++    if (val != NULL) {
++        stat_report_interval_multiple = (unsigned)json_value_get_number(val);
++        MSG("INFO: statistics report interval multiple is configured to %u\n", stat_report_interval_multiple);
++    }
+ 
+     /* get time-out value (in ms) for upstream datagrams (optional) */
+     val = json_object_get_value(conf_obj, "push_timeout_ms");
+@@ -1759,6 +1765,8 @@ int main(int argc, char ** argv)
+     sigaction(SIGINT, &sigact, NULL); /* Ctrl-C */
+     sigaction(SIGTERM, &sigact, NULL); /* default "kill" command */
+ 
++    uint32_t stat_report_cnt = 0;
++
+     /* main loop task : statistics collection */
+     while (!exit_sig && !quit_sig) {
+         /* wait for next reporting interval */
+@@ -1932,7 +1940,11 @@ int main(int argc, char ** argv)
+         } else {
+             snprintf(status_report, STATUS_SIZE, "\"stat\":{\"time\":\"%s\",\"rxnb\":%u,\"rxok\":%u,\"rxfw\":%u,\"ackr\":%.1f,\"dwnb\":%u,\"txnb\":%u,\"temp\":%d}", stat_timestamp, cp_nb_rx_rcv, cp_nb_rx_ok, cp_up_pkt_fwd, 100.0 * up_ack_ratio, cp_dw_dgram_rcv, cp_nb_tx_ok, (int)temperature);
+         }
+-        report_ready = true;
++
++        if( (stat_report_cnt % stat_report_interval_multiple) == 0 ) {
++            report_ready = true;
++        }
++        stat_report_cnt++;
+ 
+         char statistics[256] = {0};
+         snprintf(statistics, sizeof(statistics), "ubus -S call sensecap lora '{\"rx_sum\":%u,\"tx_sum\":%u,\"temperature\":\"%.1f\", \"report_time\":%lu, \"state\":1}'", cp_nb_rx_rcv, (cp_nb_tx_ok+cp_nb_tx_fail), temperature, t);
+-- 
+2.43.0
+

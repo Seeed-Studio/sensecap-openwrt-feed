@@ -80,6 +80,25 @@ target_link_libraries(s2core ${MBEDTLS_LIBRARY})
 target_link_libraries(s2core ${MBEDCRYPTO_LIBRARY})
 target_link_libraries(s2core ${MBEDX509_LIBRARY})
 
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_BINARY_DIR}/genkwcrcs
+    COMMAND gcc -std=gnu11 -I${CMAKE_CURRENT_SOURCE_DIR}/src -DCFG_prog_genkwcrcs ${CMAKE_CURRENT_SOURCE_DIR}/src/genkwcrcs.c -o ${CMAKE_CURRENT_BINARY_DIR}/genkwcrcs
+    DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/genkwcrcs.c ${CMAKE_CURRENT_SOURCE_DIR}/src/uj.h
+    COMMENT "Building genkwcrcs"
+)
+
+add_custom_command(
+    OUTPUT ${CMAKE_CURRENT_SOURCE_DIR}/src/kwcrc.h
+    COMMAND sh -c "${CMAKE_CURRENT_BINARY_DIR}/genkwcrcs $(cat ${CMAKE_CURRENT_SOURCE_DIR}/src/kwlist.txt | sed -e '/^#/d;s/[ \\t]\\+#.*//') > ${CMAKE_CURRENT_BINARY_DIR}/temp-kwcrc.h"
+    COMMAND mv ${CMAKE_CURRENT_BINARY_DIR}/temp-kwcrc.h ${CMAKE_CURRENT_SOURCE_DIR}/src/kwcrc.h
+    DEPENDS ${CMAKE_CURRENT_BINARY_DIR}/genkwcrcs ${CMAKE_CURRENT_SOURCE_DIR}/src/kwlist.txt
+    COMMENT "Generating src/kwcrc.h"
+    VERBATIM
+)
+
+add_custom_target(update_kwcrc DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/src/kwcrc.h)
+add_dependencies(s2core update_kwcrc)
+
 add_executable(station src-linux/station_main.c)
 
 target_link_libraries(station s2core)

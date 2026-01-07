@@ -71,6 +71,17 @@ parse_gateway() {
 		config_get val "$section" ref_altitude 0
 		json_add_int 'ref_altitude' "$val"
 	}
+	config_get_bool val "$section" whitelist_enable "0"
+	json_add_boolean 'whitelist_enable' "$val"
+	config_get buffer "$section" whitelist_ouis ""
+	json_add_string 'whitelist_ouis' "$buffer"
+	config_get buffer "$section" whitelist_netids ""
+	json_add_string 'whitelist_netids' "$buffer"
+	config_get buffer "$section" whitelist_devaddr_min "00000000"
+	json_add_string 'whitelist_devaddr_min' "$buffer"
+	config_get buffer "$section" whitelist_devaddr_max "00000000"
+	json_add_string 'whitelist_devaddr_max' "$buffer"
+
 	json_close_object
 }
 
