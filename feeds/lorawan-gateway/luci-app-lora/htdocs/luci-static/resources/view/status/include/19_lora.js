@@ -3,17 +3,12 @@
 'require dom';
 'require request';
 'require rpc';
-
-var callNetState = rpc.declare({
-    object: 'sensecap',
-    method: 'net_state',
-    reject: true
-});
+'require network';
 
 var callValidatorState = rpc.declare({
-    object: 'sensecap',
-    method: 'lora_network_connect',
-    reject: true
+	object: 'sensecap',
+	method: 'lora_network_connect',
+	reject: true
 });
 
 var callLoraHistory = rpc.declare({
@@ -30,43 +25,55 @@ var vCnt = 10;  //num of grids on y-axis
 return baseclass.extend({
     title: _('LoRa Status'),
 
-    load: function () {
-        return Promise.all([
-            request.get(L.resource('svg/internet_connection.svg')).catch(function () { return null; }),
-            request.get(L.resource('svg/lora_packets.svg')).catch(function () { return null; }),
-            callNetState().catch(function () { return { state: 0 }; }),
-            callValidatorState().catch(function () { return { lora_pkt_fwd: 0, station: 0 }; }),
-            callLoraHistory().catch(function () { return {}; })
-        ]);
-    },
+	load: function() {
+		return Promise.all([
+			request.get(L.resource('svg/internet_connection.svg')).catch(function() { return null; }),
+			request.get(L.resource('svg/lora_packets.svg')).catch(function() { return null; }),
+			network.getNetworks(),
+			callValidatorState().catch(function() { return { lora_pkt_fwd: 0, station: 0 }; }),
+			callLoraHistory().catch(function() { return {}; })
+		]);
+	},
 
-    render: function (data) {
-        var svg1_res = data[0];
-        var svg2_res = data[1];
-        var netResult = data[2];
-        var valResult = data[3];
-        var historyResult = data[4];
+	render: function(data) {
+		var svg1_res = data[0];
+		var svg2_res = data[1];
+		var allNetworks = data[2];
+		var valResult = data[3];
+		var historyResult = data[4];
 
-        var rv = E('div');
+		var rv = E('div');
 
-        // --- Section 1: Internet Connection ---
-        if (svg1_res && svg1_res.ok) {
-            var svgDiv = E('div', { 'style': 'width:100%;' });
+		// --- Section 1: Internet Connection ---
+		if (svg1_res && svg1_res.ok) {
+			var svgDiv = E('div', { 'style': 'width:100%;' });
             svgDiv.innerHTML = svg1_res.text();
+			
+			// Update Internet Status
+			var isOnline = false;
+			if (Array.isArray(allNetworks)) {
+				for (var i = 0; i < allNetworks.length; i++) {
+					var net = allNetworks[i];
+					if (net.getName() === 'loopback') continue;
+					// Check for IPv4 or IPv6 gateway presence
+					if (net.isUp() && (net.getGatewayAddr() || net.getGateway6Addr())) {
+						isOnline = true;
+						break;
+					}
+				}
+			}
 
-            // Update Internet Status
-            var state = netResult.state;
-            var elCheckInternet = svgDiv.querySelector("#check_internet");
-            var elErrorInternet = svgDiv.querySelector("#error_internet");
-            if (elCheckInternet && elErrorInternet) {
-                if (state == 1) {
-                    elCheckInternet.setAttribute('style', 'visibility: visible');
-                    elErrorInternet.setAttribute('style', 'visibility: hidden');
-                } else {
-                    elCheckInternet.setAttribute('style', 'visibility: hidden');
-                    elErrorInternet.setAttribute('style', 'visibility: visible');
-                }
-            }
+			var elCheckInternet = svgDiv.querySelector("#check_internet");
+			var elErrorInternet = svgDiv.querySelector("#error_internet");
+			if (elCheckInternet && elErrorInternet) {
+				if (isOnline) {
+					elCheckInternet.setAttribute('style', 'visibility: visible');
+					elErrorInternet.setAttribute('style', 'visibility: hidden');
+				} else {
+					elCheckInternet.setAttribute('style', 'visibility: hidden');
+					elErrorInternet.setAttribute('style', 'visibility: visible');
+				}
+			}
 
             // Update Validator Status
             var valState = valResult.lora_pkt_fwd | valResult.station;
