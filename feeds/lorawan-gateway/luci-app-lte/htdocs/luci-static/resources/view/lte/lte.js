@@ -23,11 +23,42 @@ return view.extend({
         s = m.section(form.NamedSection, 'LTE', 'interface', _('LTE Settings'));
         s.addremove = false;
 
-        // Enable 4G
-        o = s.option(form.Flag, 'auto', _('Enable 4G'),
+        // Enable 4G/LTE
+        o = s.option(form.Flag, 'auto', _('Enable 4G/LTE'),
             _('Enable or disable 4G/LTE connection'));
-        o.default = '0';
+        o.default = '1';
         o.rmempty = false;
+
+        // Restart Button (only shown when 4G/LTE is enabled)
+        o = s.option(form.Button, '_restart_network', _('Restart'));
+        o.inputtitle = _('Restart Connection');
+        o.inputstyle = 'action';
+        o.depends('auto', '1');
+        o.onclick = L.bind(function(ev) {
+            var btn = ev.target;
+            btn.disabled = true;
+            btn.innerText = _('Restarting...');
+
+            return fs.exec('/sbin/ifdown', ['LTE'])
+                .then(function() {
+                    return new Promise(function(resolve) {
+                        setTimeout(resolve, 2000);
+                    });
+                })
+                .then(function() {
+                    return fs.exec('/sbin/ifup', ['LTE']);
+                })
+                .then(function() {
+                    ui.addNotification(null, E('p', _('Connection restarted successfully')), 'info');
+                    btn.disabled = false;
+                    btn.innerText = _('Restart Connection');
+                })
+                .catch(function(err) {
+                    ui.addNotification(null, E('p', _('Failed to restart connection: ') + (err.message || err)), 'error');
+                    btn.disabled = false;
+                    btn.innerText = _('Restart Connection');
+                });
+        }, this);
 
         // Protocol
         o = s.option(form.Value, 'proto', _('Protocol'));
@@ -99,10 +130,33 @@ return view.extend({
         o.onclick = L.bind(function(ev) {
             var btn = ev.target;
             btn.disabled = true;
-            btn.innerText = _('Resetting...');
+            btn.innerText = _('Resetting module...');
 
             return fs.exec('/sbin/ifdown', ['LTE'])
                 .then(function() {
+                    btn.innerText = _('Waiting for modem ready...');
+                    // Send AT+CFUN=0 to disable RF
+                    return fs.exec('/bin/sh', ['-c', 'echo -e "AT+CFUN=0\\r" > /dev/ttyUSB2']);
+                })
+                .then(function() {
+                    // Wait 5 seconds
+                    return new Promise(function(resolve) {
+                        setTimeout(resolve, 5000);
+                    });
+                })
+                .then(function() {
+                    // Send AT+CFUN=1 to enable RF
+                    return fs.exec('/bin/sh', ['-c', 'echo -e "AT+CFUN=1\\r" > /dev/ttyUSB2']);
+                })
+                .then(function() {
+                    // Wait 10 seconds for modem to be ready
+                    return new Promise(function(resolve) {
+                        setTimeout(resolve, 10000);
+                    });
+                })
+                .then(function() {
+                    btn.innerText = _('Reconnecting network...');
+                    // Wait 2 more seconds before ifup
                     return new Promise(function(resolve) {
                         setTimeout(resolve, 2000);
                     });
@@ -111,7 +165,7 @@ return view.extend({
                     return fs.exec('/sbin/ifup', ['LTE']);
                 })
                 .then(function() {
-                    ui.addNotification(null, E('p', _('Modem reset successfully. Reconnecting...')), 'info');
+                    ui.addNotification(null, E('p', _('Modem reset successfully. Network reconnected.')), 'info');
                     btn.disabled = false;
                     btn.innerText = _('Reset and Reconnect');
                 })
