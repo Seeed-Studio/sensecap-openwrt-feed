@@ -1,0 +1,97 @@
+{
+    "admin/status/routes": {
+        "title": "Routing",
+        "order": 2,
+        "action": {
+            "type": "view",
+            "path": "status/routes"
+        },
+        "depends": {
+            "acl": [ "luci-mod-status-routes" ],
+            "fs": { "/dev/null/hidden": "executable" }
+        }
+    },
+    "admin/status/iptables": {
+        "title": "Firewall",
+        "order": 3,
+        "action": {
+            "type": "view",
+            "path": "status/iptables"
+        },
+        "depends": {
+            "acl": [ "luci-mod-status-firewall" ],
+            "fs": { "/dev/null/hidden": "executable" }
+        }
+    },
+    "admin/status/nftables": {
+        "title": "Firewall",
+        "order": 3,
+        "action": {
+            "type": "view",
+            "path": "status/nftables"
+        },
+        "depends": {
+            "acl": [ "luci-mod-status-firewall" ],
+            "fs": { "/dev/null/hidden": "executable" }
+        }
+    },
+    "admin/status/logs": {
+        "title": "System Log",
+        "order": 4,
+        "action": {
+            "type": "alias",
+            "path": "admin/status/logs/syslog"
+        },
+        "depends": {
+            "acl": [ "luci-mod-status-logs" ],
+            "fs": { "/dev/null/hidden": "executable" }
+        }
+    },
+    "admin/status/processes": {
+        "title": "Processes",
+        "order": 6,
+        "action": {
+            "type": "view",
+            "path": "status/processes"
+        },
+        "depends": {
+            "acl": [ "luci-mod-status-processes" ],
+            "fs": { "/dev/null/hidden": "executable" }
+        }
+    },
+    "admin/status/channel_analysis": {
+        "title": "Channel Analysis",
+        "order": 7,
+        "action": {
+            "type": "view",
+            "path": "status/channel_analysis"
+        },
+        "depends": {
+            "acl": [ "luci-mod-status-channel_analysis" ],
+            "fs": { "/dev/null/hidden": "executable" }
+        }
+    },
+    "admin/status/realtime": {
+        "title": "Realtime Graphs",
+        "order": 7,
+        "action": {
+            "type": "alias",
+            "path": "admin/status/realtime/load"
+        },
+        "depends": {
+            "acl": [ "luci-mod-status-realtime" ],
+            "fs": { "/dev/null/hidden": "executable" }
+        }
+    },
+    "admin/status/mwan3": {
+        "title": "MultiWAN Manager",
+        "order": 600,
+        "action": {
+            "type": "firstchild"
+        },
+        "depends": {
+            "acl": [ "luci-app-mwan3" ],
+            "fs": { "/dev/null/hidden": "executable" }
+        }
+    }
+}

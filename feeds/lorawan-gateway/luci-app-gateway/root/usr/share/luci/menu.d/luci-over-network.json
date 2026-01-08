@@ -1,0 +1,80 @@
+{
+    "admin/network/wireless": {
+        "title": "Wi-Fi",
+        "order": 40,
+        "action": {
+            "type": "view",
+            "path": "network/wireless"
+        },
+        "depends": {
+            "acl": [ "luci-mod-network-config" ],
+            "uci": { "wireless": { "@wifi-device": true } }
+        }
+    },
+    "admin/network/routes": {
+        "title": "Routing",
+        "order": 20,
+        "action": {
+            "type": "view",
+            "path": "network/routes"
+        },
+        "depends": {
+            "acl": [ "luci-mod-network-config" ]
+        }
+    },
+    "admin/network/dhcp": {
+        "title": "DHCP and DNS",
+        "order": 30,
+        "action": {
+            "type": "view",
+            "path": "network/dhcp"
+        },
+        "depends": {
+            "acl": [ "luci-mod-network-dhcp" ],
+            "fs": { "/usr/sbin/dnsmasq": "executable" },
+            "uci": { "dhcp": true }
+        }
+    },
+    "admin/network/diagnostics": {
+        "title": "Diagnostics",
+        "order": 80,
+        "action": {
+            "type": "view",
+            "path": "network/diagnostics"
+        },
+        "depends": {
+            "acl": [ "luci-mod-network-diagnostics" ]
+        }
+    },
+    "admin/network/lte": {
+        "title": "LTE",
+        "order": 50,
+        "action": {
+            "type": "view",
+            "path": "lte/lte"
+        }
+    },
+    "admin/network/firewall": {
+        "title": "Firewall",
+        "order": 70,
+        "action": {
+            "type": "alias",
+            "path": "admin/network/firewall/zones"
+        },
+        "depends": {
+            "acl": [ "luci-app-firewall" ],
+            "fs": { "/sbin/fw3": "executable" },
+            "uci": { "firewall": true }
+        }
+    },
+    "admin/network/mwan3": {
+        "title": "MultiWAN Manager",
+        "order": 60,
+        "action": {
+            "type": "firstchild"
+        },
+        "depends": {
+            "acl": [ "luci-app-mwan3" ]
+        }
+    }
+}
