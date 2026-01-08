@@ -19,6 +19,9 @@
                 ],
                 "luci": [
                     "getInitList"
+                ],
+                "sensecap": [
+                    "*"
                 ]
             },
             "uci": [
