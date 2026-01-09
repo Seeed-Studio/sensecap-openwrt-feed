@@ -1,0 +1,59 @@
+{
+    "admin/system/system": {
+        "title": "General Settings",
+        "order": 1,
+        "action": {
+            "type": "view",
+            "path": "system/general"
+        }
+    },
+    "admin/system/timesync": {
+        "title": "Time Synchronization",
+        "order": 2,
+        "action": {
+            "type": "view",
+            "path": "system/timesync"
+        }
+    },
+    "admin/system/leds": {
+        "order": 3
+    },
+    "admin/system/ups": {
+        "order": 4
+    },
+    "admin/system/flash": {
+        "title": "Backup / Update",
+        "order": 5
+    },
+    "admin/system/reboot": {
+        "title": "Shutdown / Reboot",
+        "order": 6
+    },
+    "admin/system/admin": {
+        "order": 7
+    },
+    "admin/system/ttyd": {
+        "order": 8
+    },
+    "admin/system/software": {
+        "depends": {
+            "fs": {
+                "/dev/null/hidden": "executable"
+            }
+        }
+    },
+    "admin/system/startup": {
+        "depends": {
+            "fs": {
+                "/dev/null/hidden": "executable"
+            }
+        }
+    },
+    "admin/system/crontab": {
+        "depends": {
+            "fs": {
+                "/dev/null/hidden": "executable"
+            }
+        }
+    }
+}
