@@ -161,6 +161,10 @@ uci commit mwan3
 uci set rpcd.@login[0].username='admin'
 uci commit rpcd
 
+# Set system hostname
+uci set system.@system[0].hostname='SenseCAP'
+uci commit system
+
 # Restart services
 /etc/init.d/network restart
 /etc/init.d/firewall restart
