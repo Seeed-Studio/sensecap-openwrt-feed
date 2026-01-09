@@ -7,6 +7,7 @@
 'require fs';
 'require ui';
 
+var ota_url = "https://github.com/Seeed-Studio/sensecap-openwrt-feed/releases/latest/download/openwrt-armsr-armv8-generic-rootfs.tar.gz";
 var isReadonlyView = !L.hasViewPermission();
 
 var callSystemValidateFirmwareImage = rpc.declare({
@@ -204,7 +205,7 @@ return view.extend({
 
 				console.log('[OTA] URL input element:', urlInput);
 				console.log('[OTA] Custom URL value:', customUrl);
-				var displayUrl = customUrl || 'https://github.com/is-qian/recomputer-gateway/releases/latest/download/openwrt-armsr-armv8-generic-rootfs.tar.gz';
+				var displayUrl = customUrl || ota_url;
 
 				var self = this;
 				ui.showModal(_('OTA Firmware Upgrade'), [
@@ -250,7 +251,7 @@ return view.extend({
 
 		// If still no URL, use default
 		if (!customUrl) {
-			customUrl = 'https://github.com/is-qian/recomputer-gateway/releases/latest/download/openwrt-armsr-armv8-generic-rootfs.tar.gz';
+			customUrl = ota_url;
 		}
 
 		var progressModal = ui.showModal(_('Downloading firmware...'), [
@@ -644,7 +645,7 @@ return view.extend({
 		o.onclick = L.bind(this.handleOTAUpgrade, this);
 
 		o = ss.option(form.Value, 'ota_url', _('Firmware URL'));
-		o.default = 'https://github.com/is-qian/recomputer-gateway/releases/latest/download/openwrt-armsr-armv8-generic-rootfs.tar.gz';
+		o.default = ota_url;
 		o.placeholder = 'https://...';
 
 		o = ss.option(form.DummyValue, 'current_version', _('Current Version'));
