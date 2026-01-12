@@ -19,15 +19,11 @@
         "order": 3,
         "action": {
             "type": "view",
-            "path": "system/led"
+            "path": "system/leds"
         }
     },
     "admin/system/ups": {
         "order": 4
-    },
-    "admin/system/flash": {
-        "title": "Backup / Update",
-        "order": 5
     },
     "admin/system/reboot": {
         "title": "Shutdown / Reboot",

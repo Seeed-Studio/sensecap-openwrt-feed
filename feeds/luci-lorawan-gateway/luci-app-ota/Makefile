@@ -7,7 +7,7 @@
 include $(TOPDIR)/rules.mk
 
 LUCI_TITLE:=LuCI OTA Firmware Upgrade
-LUCI_DEPENDS:=+luci-mod-system +curl
+LUCI_DEPENDS:=+curl
 LUCI_PKGARCH:=all
 
 PKG_VERSION:=1.0.0
