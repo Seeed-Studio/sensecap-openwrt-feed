@@ -11,6 +11,12 @@ log_message() {
 }
 
 initialize_default_ap() {
+    rm -f /etc/config/wireless
+    touch /etc/config/wireless
+    rm -rf /tmp/luci-*
+    /etc/init.d/rpcd restart
+    /etc/init.d/uhttpd restart
+
     while true; do
         if ip link show wlan0 &>/dev/null; then
             log_message "wlan0 interface detected"
@@ -197,23 +203,18 @@ apply_wifi_config() {
 check_usb_mounts() {
     [ -d "$MEDIA_DIR" ] || return
     
-    for mount_point in "$MEDIA_DIR"/*; do
-        [ -d "$mount_point" ] || continue
+    local config_file=$(find "$MEDIA_DIR" -name "$CONFIG_FILE" -type f 2>/dev/null | head -n 1)
+    
+    if [ -n "$config_file" ] && [ -f "$config_file" ]; then
+        local current_md5=$(md5sum "$config_file" 2>/dev/null | awk '{print $1}')
         
-        local config_file="$mount_point/$CONFIG_FILE"
-        if [ -f "$config_file" ]; then
-            local current_md5=$(md5sum "$config_file" 2>/dev/null | awk '{print $1}')
-            
-            if [ "$current_md5" != "$LAST_CONFIG_MD5" ]; then
-                apply_wifi_config "$config_file"
-                if [ $? -eq 0 ]; then
-                    LAST_CONFIG_MD5="$current_md5"
-                fi
+        if [ "$current_md5" != "$LAST_CONFIG_MD5" ]; then
+            apply_wifi_config "$config_file"
+            if [ $? -eq 0 ]; then
+                LAST_CONFIG_MD5="$current_md5"
             fi
-            
-            return
         fi
-    done
+    fi
 }
 
 log_message "WiFi Module Monitor started"
