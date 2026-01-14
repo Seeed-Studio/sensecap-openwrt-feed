@@ -1,0 +1,3 @@
+config hardware 'hardware'
+    option ups_gpio_chip '/dev/gpiochip0'
+    option ups_gpio_line '25'
