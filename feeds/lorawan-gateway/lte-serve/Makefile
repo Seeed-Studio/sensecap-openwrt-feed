@@ -10,7 +10,7 @@ define Package/lte-serve
   SECTION:=gateway
   CATEGORY:=Gateway
   TITLE:=LTE Module Initialization Service
-  DEPENDS:=+kmod-usb-serial +kmod-usb-serial-option
+  DEPENDS:=+gpiod-tools +kmod-usb-serial +kmod-usb-serial-option
   PKGARCH:=all
 endef
 

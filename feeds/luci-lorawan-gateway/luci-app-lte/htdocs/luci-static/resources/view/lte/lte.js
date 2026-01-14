@@ -10,7 +10,8 @@ return view.extend({
     load: function() {
         return Promise.all([
             network.getDevices(),
-            uci.load('network')
+            uci.load('network'),
+            uci.load('hardware')
         ]);
     },
 
@@ -136,7 +137,7 @@ return view.extend({
                 .then(function() {
                     btn.innerText = _('Waiting for modem ready...');
                     // Send AT+CFUN=0 to disable RF
-                    return fs.exec('/bin/sh', ['-c', 'echo -e "AT+CFUN=0\\r" > /dev/ttyUSB2']);
+                    return fs.exec('/bin/sh', ['-c', 'echo -e \"AT+CFUN=0\\r\" > ' + (uci.get('hardware', 'hardware', 'lte_usb_port') || '/dev/ttyUSB2')]);
                 })
                 .then(function() {
                     // Wait 5 seconds
@@ -146,7 +147,7 @@ return view.extend({
                 })
                 .then(function() {
                     // Send AT+CFUN=1 to enable RF
-                    return fs.exec('/bin/sh', ['-c', 'echo -e "AT+CFUN=1\\r" > /dev/ttyUSB2']);
+                    return fs.exec('/bin/sh', ['-c', 'echo -e \"AT+CFUN=1\\r\" > ' + (uci.get('hardware', 'hardware', 'lte_usb_port') || '/dev/ttyUSB2')]);
                 })
                 .then(function() {
                     // Wait 10 seconds for modem to be ready
