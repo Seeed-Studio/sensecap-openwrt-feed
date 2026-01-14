@@ -123,17 +123,32 @@ async fn execute_commands(commands: &[String], logger: &Logger) {
     }
 }
 
-// Monitor GPIO25 for falling edge
+// Monitor UPS GPIO for falling edge
 async fn monitor_gpio(logger: Arc<Logger>) -> Result<(), Box<dyn std::error::Error>> {
     logger.log("Initializing UPS monitoring ...");
 
-    // Open GPIO chip (typically /dev/gpiochip0, but may vary)
-    let mut chip = Chip::new("/dev/gpiochip0")
-        .or_else(|_| Chip::new("/dev/gpiochip1"))
-        .or_else(|_| Chip::new("/dev/gpiochip2"))?;
+    let uci_get = |config: &str, section: &str, option: &str| -> Result<String, Box<dyn std::error::Error>> {
+        let output = Command::new("uci")
+            .args(&["get", &format!("{}.{}.{}", config, section, option)])
+            .output()?;
+        if output.status.success() {
+            Ok(String::from_utf8(output.stdout)?.trim().to_string())
+        } else {
+            Err(format!("uci get failed: {}.{}.{}", config, section, option).into())
+        }
+    };
 
-    // Get GPIO line 25
-    let line = chip.get_line(25)?;
+    // Load GPIO configuration from UCI
+    let ups_gpio_chip = uci_get("hardware", "hardware", "ups_gpio_chip")?;
+    let ups_gpio_line: u32 = uci_get("hardware", "hardware", "ups_gpio_line")?.parse()?;
+        
+    logger.log(&format!("Using GPIO chip: {}, line: {}", ups_gpio_chip, ups_gpio_line));
+
+    // Open UPS GPIO chip
+    let mut chip = Chip::new(&ups_gpio_chip)?;
+
+    // Get UPS GPIO line
+    let line = chip.get_line(ups_gpio_line)?;
     
     // Request line for input with falling edge events
     let mut line_handle = line.events(

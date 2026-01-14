@@ -14,7 +14,7 @@ return view.extend({
         m = new form.Map('ups-module', _('UPS Configuration'),
             _('Configure UPS power outage commands.'));
 
-        s = m.section(form.NamedSection, 'cmd', 'ups', _('Power Outage Commands'));
+        s = m.section(form.NamedSection, 'cmd', 'ups', _('UPS Settings'));
         s.anonymous = true;
         s.addremove = false;
 
