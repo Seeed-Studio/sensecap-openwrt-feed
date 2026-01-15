@@ -67,25 +67,21 @@ return view.extend({
 
         s.option(form.Value, 'name', _('Name'));
 
+        // Filter out all other 'led' characters and keep only those with the prefix 'led-'
+        // Alias ​​the led prefix with "led-" to the user prefix with "user-"
         o = s.option(form.ListValue, 'sysfs', _('<abbr title="Light Emitting Diode">LED</abbr> Name'));
-
-        // Custom LED mapping: only show led-blue, led-green, led-red renamed as user-*
-        var ledMapping = {
-            'led-blue': 'user-blue',
-            'led-green': 'user-green',
-            'led-red': 'user-red'
-        };
-
         Object.keys(leds).sort().forEach(function (name) {
-            if (ledMapping[name]) {
-                o.value(name, ledMapping[name]);
+            if (name.startsWith('led-')) {
+                o.value(name, name.replace(/^led-/, 'user-'))
             }
         });
 
-        // Custom textvalue function to display mapped names in the list
         o.textvalue = function (section_id) {
             var value = uci.get('system', section_id, 'sysfs');
-            return ledMapping[value] || value;
+            if (value && value.startsWith('led-')) {
+                return value.replace(/^led-/, 'user-');
+            }
+            return value;
         };
 
         o = s.option(form.ListValue, 'trigger', _('Trigger'));
