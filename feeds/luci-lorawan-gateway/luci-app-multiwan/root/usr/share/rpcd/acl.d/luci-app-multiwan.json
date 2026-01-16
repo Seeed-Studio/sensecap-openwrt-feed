@@ -1,0 +1,15 @@
+{
+    "luci-app-multiwan": {
+        "description": "Grant access to MultiWAN Manager",
+        "read": {
+            "uci": [
+                "mwan3"
+            ]
+        },
+        "write": {
+            "uci": [
+                "mwan3"
+            ]
+        }
+    }
+}

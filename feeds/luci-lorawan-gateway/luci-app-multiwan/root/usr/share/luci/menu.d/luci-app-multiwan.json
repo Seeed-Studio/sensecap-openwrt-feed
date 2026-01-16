@@ -1,0 +1,15 @@
+{
+    "admin/network/multiwan": {
+        "title": "MultiWAN Manager",
+        "order": 50,
+        "action": {
+            "type": "view",
+            "path": "multiwan/multiwan"
+        },
+        "depends": {
+            "acl": [
+                "luci-app-multiwan"
+            ]
+        }
+    }
+}

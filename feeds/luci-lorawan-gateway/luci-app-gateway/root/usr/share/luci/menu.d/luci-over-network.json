@@ -67,14 +67,22 @@
             "uci": { "firewall": true }
         }
     },
-    "admin/network/mwan3": {
-        "title": "MultiWAN Manager",
+    "admin/network/multiwan": {
+        "title": "MultiWAN",
         "order": 60,
         "action": {
-            "type": "firstchild"
+            "type": "view",
+            "path": "multiwan/multiwan"
         },
         "depends": {
-            "acl": [ "luci-app-mwan3" ]
+            "acl": [ "luci-app-multiwan" ]
+        }
+    },
+    "admin/network/mwan3": {
+        "depends": {
+            "fs": {
+                "/dev/null/hidden": "executable"
+            }
         }
     }
 }
