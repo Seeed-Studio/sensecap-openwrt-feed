@@ -2,18 +2,8 @@
 <!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
 
 <svg viewBox="0 0 511.114 135.413" style="shape-rendering: geometricprecision;" xmlns="http://www.w3.org/2000/svg">
-  <g id="m2" transform="matrix(0.35519, 0, 0, 0.35519, 65.84742, 40.963921)" style="">
-    <path class="fil0 str0" d="M9.0998 0.1l125.601 0c4.9697,0 8.9999,4.0302 8.9999,8.9999l0 117c0,4.9696 -4.0302,8.9998 -8.9999,8.9998l-125.601 0.0002c-4.9696,-0.0002 -8.9998,-4.0304 -8.9998,-9.0001l-0.0001 -117c0.0001,-4.9697 4.0303,-8.9999 9,-8.9999z" style="fill: rgb(170, 169, 169); stroke: rgb(31, 26, 23); stroke-width: 0.2px;"/>
-    <path class="fil1" d="M9.1439 3.3l125.512 0c3.2271,0 5.8441,2.617 5.8441,5.8441l0 116.912c0,3.227 -2.617,5.844 -5.8441,5.844l-125.512 0.0001c-3.227,-0.0001 -5.844,-2.6171 -5.844,-5.8442l-0.0001 -116.911c0.0001,-3.2271 2.6171,-5.8441 5.8442,-5.8441z" style="fill: rgb(255, 255, 255);"/>
-    <path class="fil2" d="M140.5 109.662l-22.2376 22.2376 16.3935 0c3.2143,0 5.8441,-2.6298 5.8441,-5.8441l0 -16.3935z" style="fill: rgb(152, 202, 67);"/>
-    <g id="_335356496">
-      <rect id="_334871048" class="fil0" transform="matrix(0.707107 0.707107 -0.707107 0.707107 69.806 63.3328)" width="1.9999" height="3.2984" style="fill: rgb(170, 169, 169);"/>
-      <rect id="_334871768" class="fil0" transform="matrix(0.707107 0.707107 -0.707107 0.707107 74.9474 68.4742)" width="1.9999" height="3.2984" style="fill: rgb(170, 169, 169);"/>
-      <g>
-        <polygon id="_334871528" class="fil3" points="70.4471,70.8025 68.8915,69.2469 73.627,64.5113 75.1827,66.067 " style="fill: rgb(170, 169, 169); fill-opacity: 0;"/>
-        <polygon id="_334871840" class="fil0" points="70.4471,70.8025 68.8915,69.2469 73.627,64.5113 75.1827,66.067 " style="fill: rgb(170, 169, 169);"/>
-      </g>
-    </g>
+  <g id="gateway-device">
+    <image x="127.64742" y="28.963921" width="237.6" height="246.4" href="/luci-static/resources/svg/recomputercm.png" transform="matrix(0.35519, 0, 0, 0.35519, 0, 0)"/>
   </g>
   <g transform="matrix(0.863875, 0, 0, 0.863875, -29.370577, -176.184479)" id="earth">
     <g transform="matrix(0.292269, 0, 0, 0.292269, 253.523026, 205.445847)">
