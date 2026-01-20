@@ -4,7 +4,7 @@ use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::process::Command;
 use std::sync::{Arc, Mutex as StdMutex};
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tokio::time::sleep;
 
 // UPS Configuration Structure
@@ -159,22 +159,36 @@ async fn monitor_gpio(logger: Arc<Logger>) -> Result<(), Box<dyn std::error::Err
 
     logger.log("UPS monitoring started, waiting for power outage signal...");
 
+    let debounce_duration = Duration::from_millis(500);
+    let mut last_event_time: Option<Instant> = None;
+
     loop {
         match line_handle.next() {
             Some(Ok(evt)) => {
                 if evt.event_type() == EventType::FallingEdge {
-                    // Load current configuration
-                    match load_config() {
-                        Ok(config) => {
-                            if config.commands.is_empty() {
-                                logger.log("No commands configured");
-                            } else {
-                                execute_commands(&config.commands, &logger).await;
+                    let now = Instant::now();
+                    
+                    if let Some(last_time) = last_event_time {
+                        let elapsed = last_time.elapsed();
+                        if elapsed < debounce_duration {
+                            continue;
+                        }
+                    }
+                    
+                    let current_value = line_handle.get_value()?;
+                    if current_value == 0 {
+                        match load_config() {
+                            Ok(config) => {
+                                if !config.commands.is_empty() {
+                                    execute_commands(&config.commands, &logger).await;
+                                }
+                            }
+                            Err(e) => {
+                                logger.log(&format!("Failed to load config: {}", e));
                             }
                         }
-                        Err(e) => {
-                            logger.log(&format!("Failed to load config: {}", e));
-                        }
+                        
+                        last_event_time = Some(now);
                     }
                 }
             }
