@@ -4,85 +4,10 @@ MEDIA_DIR="/media"
 CONFIG_FILE="WLAN.txt"
 WIRELESS_CONFIG="/etc/config/wireless"
 LAST_CONFIG_MD5=""
-SN_FILE="/etc/deviceinfo/sn"
+LAST_INTERFACES=""
 
 log_message() {
     logger -t wifi-module "$1"
-}
-
-initialize_default_ap() {
-    rm -f /etc/config/wireless
-    touch /etc/config/wireless
-    rm -rf /tmp/luci-*
-    /etc/init.d/rpcd restart
-    /etc/init.d/uhttpd restart
-
-    while true; do
-        if ip link show wlan0 &>/dev/null; then
-            log_message "wlan0 interface detected"
-            break
-        fi
-        sleep 2
-    done
-
-    log_message "Initializing default AP configuration"
-    
-    local sn=""
-    local ssid="R1225-0000"
-    
-    if [ ! -f "$SN_FILE" ]; then
-        log_message "SN file not found, waiting 5 seconds before creating default..."
-        sleep 5
-        
-        mkdir -p "$(dirname "$SN_FILE")"
-        
-        echo "seeed0000" > "$SN_FILE"
-        log_message "Created default SN file: $SN_FILE with content 'seeed0000'"
-    fi
-    
-    if [ -f "$SN_FILE" ]; then
-        sn=$(cat "$SN_FILE" | tr -d '[:space:]')
-        if [ ${#sn} -ge 4 ]; then
-            local last_four=${sn: -4}
-            ssid="R1225-${last_four}"
-        fi
-    fi
-    
-    log_message "Setting up AP with SSID: $ssid"
-
-    if ! uci -q get wireless.radio0 >/dev/null 2>&1; then
-        log_message "Creating wifi-device radio0"
-        uci set wireless.radio0='wifi-device'
-        uci set wireless.radio0.type='mac80211'
-        uci set wireless.radio0.path='platform/soc/fe300000.mmcnr/mmc_host/mmc1/mmc1:0001/mmc1:0001:1'
-        uci commit wireless
-    fi
-    
-    uci set wireless.radio0.disabled='0'
-    uci set wireless.radio0.band='2g'
-    uci set wireless.radio0.channel='6'
-    uci -q delete wireless.radio0.htmode
-    
-    uci -q delete wireless.default_radio0
-    uci -q delete wireless.wifinet0
-    
-    uci set wireless.default_radio0='wifi-iface'
-    uci set wireless.default_radio0.device='radio0'
-    uci set wireless.default_radio0.network='wan'
-    uci set wireless.default_radio0.mode='ap'
-    uci set wireless.default_radio0.ifname='wlan0'
-    uci set wireless.default_radio0.ssid="$ssid"
-    uci set wireless.default_radio0.encryption='psk2'
-    uci set wireless.default_radio0.key='1234567890'
-    
-    uci commit wireless
-    wifi reload
-    
-    rm -rf /tmp/luci-*
-    /etc/init.d/rpcd restart
-    /etc/init.d/uhttpd restart
-    
-    log_message "Default AP initialized: SSID=$ssid, Password=1234567890"
 }
 
 apply_wifi_config() {
@@ -217,11 +142,22 @@ check_usb_mounts() {
     fi
 }
 
+check_new_interfaces() {
+    local current_interfaces=$(ip -o link show | awk -F': ' '{print $2}' | sort | tr '\n' ' ')
+    
+    if [ -n "$LAST_INTERFACES" ] && [ "$current_interfaces" != "$LAST_INTERFACES" ]; then
+        log_message "Network interface change detected, restarting WiFi..."
+        wifi reload && wifi down radio0 && wifi up radio0
+        log_message "WiFi restarted"
+    fi
+    
+    LAST_INTERFACES="$current_interfaces"
+}
+
 log_message "WiFi Module Monitor started"
 
-initialize_default_ap
-
 while true; do
+    check_new_interfaces
     check_usb_mounts
     sleep 1
 done

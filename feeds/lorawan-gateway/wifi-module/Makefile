@@ -25,6 +25,8 @@ define Package/wifi-module/install
 	$(INSTALL_BIN) ./files/wifi-module.sh $(1)/usr/sbin/wifi-module.sh
 	$(INSTALL_DIR) $(1)/etc/init.d
 	$(INSTALL_BIN) ./files/wifi-module.init $(1)/etc/init.d/wifi-module
+	$(INSTALL_DIR) $(1)/etc/uci-defaults
+	$(INSTALL_BIN) ./files/etc/uci-defaults/66_wifi_init $(1)/etc/uci-defaults/66_wifi_init
 endef
 
 $(eval $(call BuildPackage,wifi-module))
