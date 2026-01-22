@@ -5,6 +5,8 @@ CONFIG_FILE="WLAN.txt"
 WIRELESS_CONFIG="/etc/config/wireless"
 LAST_CONFIG_MD5=""
 LAST_INTERFACES=""
+NO_CLIENT_COUNTER=0
+NO_CLIENT_THRESHOLD=300
 
 log_message() {
     logger -t wifi-module "$1"
@@ -154,10 +156,105 @@ check_new_interfaces() {
     LAST_INTERFACES="$current_interfaces"
 }
 
+check_r1225_hotspot() {
+    local r1225_section=""
+    local section_list=$(uci show wireless | grep "\.ssid=" | grep "R1225")
+    
+    if [ -z "$section_list" ]; then
+        NO_CLIENT_COUNTER=0
+        return
+    fi
+    
+    r1225_section=$(echo "$section_list" | head -1 | cut -d'.' -f2 | cut -d'=' -f1)
+    
+    if [ -z "$r1225_section" ]; then
+        NO_CLIENT_COUNTER=0
+        return
+    fi
+    
+    local is_disabled=$(uci -q get wireless.$r1225_section.disabled 2>/dev/null)
+    
+    if [ "$is_disabled" = "1" ]; then
+        NO_CLIENT_COUNTER=0
+        return
+    fi
+    
+    local has_clients=$(iw dev 2>/dev/null | grep -A 20 "Interface wlan" | grep -c "Station")
+    
+    if [ "$has_clients" -eq 0 ]; then
+        NO_CLIENT_COUNTER=$((NO_CLIENT_COUNTER + 1))
+        
+        if [ $NO_CLIENT_COUNTER -ge $NO_CLIENT_THRESHOLD ]; then
+            log_message "R1225 hotspot has no clients for 5 minutes, disabling..."
+            uci set wireless.$r1225_section.disabled='1'
+            uci commit wireless
+            wifi reload
+            log_message "R1225 hotspot disabled (section: $r1225_section)"
+            NO_CLIENT_COUNTER=0
+        fi
+    else
+        NO_CLIENT_COUNTER=0
+    fi
+}
+
+init_r1225_hotspot() {
+    log_message "Checking R1225 hotspot initialization..."
+    
+    local r1225_section=""
+    local section_list=$(uci show wireless | grep "\.ssid=" | grep "R1225")
+    
+    if [ -z "$section_list" ]; then
+        log_message "No R1225 hotspot found, skipping initialization"
+        return
+    fi
+    
+    r1225_section=$(echo "$section_list" | head -1 | cut -d'.' -f2 | cut -d'=' -f1)
+    
+    if [ -z "$r1225_section" ]; then
+        return
+    fi
+    local r1225_disabled=$(uci -q get wireless.$r1225_section.disabled 2>/dev/null)
+    
+    if [ "$r1225_disabled" != "1" ]; then
+        log_message "R1225 hotspot is already enabled"
+        return
+    fi
+    
+    log_message "R1225 hotspot is disabled, checking for other active WiFi..."
+    
+    local has_active_wifi=0
+    
+    uci show wireless | grep "^wireless\." | while read -r cfg; do
+        local section=$(echo "$cfg" | cut -d'.' -f2 | cut -d'=' -f1)
+        local is_iface=$(uci -q get wireless.$section 2>/dev/null | grep "wifi-iface")
+        
+        if [ -n "$is_iface" ] && [ "$section" != "$r1225_section" ]; then
+            local disabled=$(uci -q get wireless.$section.disabled 2>/dev/null)
+            if [ "$disabled" != "1" ]; then
+                has_active_wifi=1
+                break
+            fi
+        fi
+    done
+    
+    if [ "$has_active_wifi" -eq 0 ]; then
+        log_message "No other active WiFi found, enabling R1225 hotspot..."
+        uci set wireless.$r1225_section.disabled='0'
+        uci commit wireless
+        wifi reload
+        log_message "R1225 hotspot enabled (section: $r1225_section)"
+    else
+        log_message "Other active WiFi detected, keeping R1225 hotspot disabled"
+    fi
+}
+
 log_message "WiFi Module Monitor started"
+
+init_r1225_hotspot
 
 while true; do
     check_new_interfaces
     check_usb_mounts
+    check_r1225_hotspot
     sleep 1
 done
