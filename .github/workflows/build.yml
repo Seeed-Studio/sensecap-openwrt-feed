@@ -74,6 +74,11 @@ jobs:
           make defconfig
           cat .config
 
+      - name: Disable Rust LLVM CI download
+        run: |
+          sed -i 's/--set=llvm.download-ci-llvm=true/--set=llvm.download-ci-llvm=false/' \
+            openwrt/feeds/packages/lang/rust/Makefile
+
       - name: Build for recomputer-gateway
         run: |
           cd openwrt
