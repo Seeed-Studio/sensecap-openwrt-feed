@@ -105,7 +105,7 @@ jobs:
           mkdir -p opt/packages
           cp ../../../../packages/aarch64_generic/lorawan_gateway/*.ipk opt/packages/ || true
           cp ../../../../packages/aarch64_generic/luci_lorawan_gateway/*.ipk opt/packages/ || true
-          tar -czf ../openwrt-armsr-armv8-generic-rootfs.tar.gz *
+          sudo tar --owner=0 --group=0 --numeric-owner -czf ../openwrt-armsr-armv8-generic-rootfs.tar.gz .
           tar -tzf ../openwrt-armsr-armv8-generic-rootfs.tar.gz | grep version.txt
           
       - name: Create Release
