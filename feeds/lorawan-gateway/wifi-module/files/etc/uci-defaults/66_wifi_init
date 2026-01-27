@@ -53,7 +53,7 @@ uci -q delete wireless.wifinet0
 
 uci set wireless.default_radio0='wifi-iface'
 uci set wireless.default_radio0.device='radio0'
-uci set wireless.default_radio0.network='wan'
+uci set wireless.default_radio0.network='wlan'
 uci set wireless.default_radio0.mode='ap'
 uci set wireless.default_radio0.ifname='wlan0'
 uci set wireless.default_radio0.ssid="$ssid"

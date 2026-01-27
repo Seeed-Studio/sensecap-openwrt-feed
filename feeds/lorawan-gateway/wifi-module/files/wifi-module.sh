@@ -3,6 +3,24 @@
 MEDIA_DIR="/media"
 CONFIG_FILE="WLAN.txt"
 WIRELESS_CONFIG="/etc/config/wireless"
+SN_FILE="/etc/deviceinfo/sn"
+DEFAULT_SSID="R1225-0000"
+
+get_default_ssid() {
+    local sn=""
+    local ssid="R1225-0000"
+    
+    if [ -f "$SN_FILE" ]; then
+        sn=$(cat "$SN_FILE" | tr -d '[:space:]')
+        if [ ${#sn} -ge 4 ]; then
+            local last_four=${sn: -4}
+            ssid="R1225-${last_four}"
+        fi
+    fi
+    
+    echo "$ssid"
+}
+
 LAST_CONFIG_MD5=""
 LAST_INTERFACES=""
 NO_CLIENT_COUNTER=0
@@ -69,7 +87,7 @@ apply_wifi_config() {
         
         uci set wireless.default_radio0='wifi-iface'
         uci set wireless.default_radio0.device='radio0'
-        uci set wireless.default_radio0.network='wan'
+        uci set wireless.default_radio0.network='wlan'
         uci set wireless.default_radio0.mode='ap'
         uci set wireless.default_radio0.ifname='wlan0'
         uci set wireless.default_radio0.ssid="$ap_ssid"
@@ -101,7 +119,7 @@ apply_wifi_config() {
         
         uci set wireless.default_radio0='wifi-iface'
         uci set wireless.default_radio0.device='radio0'
-        uci set wireless.default_radio0.network='wlan'
+        uci set wireless.default_radio0.network='wwan'
         uci set wireless.default_radio0.mode='sta'
         uci set wireless.default_radio0.ifname='wlan0'
         uci set wireless.default_radio0.ssid="$sta_ssid"
@@ -157,8 +175,9 @@ check_new_interfaces() {
 }
 
 check_r1225_hotspot() {
+    local default_ssid=$(get_default_ssid)
     local r1225_section=""
-    local section_list=$(uci show wireless | grep "\.ssid=" | grep "R1225")
+    local section_list=$(uci show wireless | grep "\.ssid=" | grep "^wireless.*\.ssid='${default_ssid}'$")
     
     if [ -z "$section_list" ]; then
         NO_CLIENT_COUNTER=0
@@ -179,17 +198,24 @@ check_r1225_hotspot() {
         return
     fi
     
-    local has_clients=$(iw dev wlan0 station dump 2>/dev/null | grep -c "^Station")
+    
+    local ap_interface=$(iw dev 2>/dev/null | awk '/Interface/{iface=$2} /type AP/{print iface; exit}')
+    
+    if [ -z "$ap_interface" ]; then
+        NO_CLIENT_COUNTER=0
+        return
+    fi
+    local has_clients=$(iw dev "$ap_interface" station dump 2>/dev/null | grep -c "^Station")
     
     if [ "$has_clients" -eq 0 ]; then
         NO_CLIENT_COUNTER=$((NO_CLIENT_COUNTER + 1))
         
         if [ $NO_CLIENT_COUNTER -ge $NO_CLIENT_THRESHOLD ]; then
-            log_message "R1225 hotspot has no clients for 5 minutes, disabling..."
+            log_message "Default hotspot ($default_ssid) has no clients for 5 minutes, disabling..."
             uci set wireless.$r1225_section.disabled='1'
             uci commit wireless
             wifi reload
-            log_message "R1225 hotspot disabled (section: $r1225_section)"
+            log_message "Default hotspot disabled (section: $r1225_section, SSID: $default_ssid)"
             NO_CLIENT_COUNTER=0
         fi
     else
@@ -198,13 +224,14 @@ check_r1225_hotspot() {
 }
 
 init_r1225_hotspot() {
-    log_message "Checking R1225 hotspot initialization..."
+    local default_ssid=$(get_default_ssid)
+    log_message "Checking R1225 hotspot initialization for SSID: $default_ssid..."
     
     local r1225_section=""
-    local section_list=$(uci show wireless | grep "\.ssid=" | grep "R1225")
+    local section_list=$(uci show wireless | grep "\.ssid=" | grep "^wireless.*\.ssid='${default_ssid}'$")
     
     if [ -z "$section_list" ]; then
-        log_message "No R1225 hotspot found, skipping initialization"
+        log_message "No default hotspot ($default_ssid) found, skipping initialization"
         return
     fi
     
@@ -216,11 +243,11 @@ init_r1225_hotspot() {
     local r1225_disabled=$(uci -q get wireless.$r1225_section.disabled 2>/dev/null)
     
     if [ "$r1225_disabled" != "1" ]; then
-        log_message "R1225 hotspot is already enabled"
+        log_message "Default hotspot ($default_ssid) is already enabled"
         return
     fi
     
-    log_message "R1225 hotspot is disabled, checking for other active WiFi..."
+    log_message "Default hotspot ($default_ssid) is disabled, checking for other active WiFi..."
     
     local has_active_wifi=0
     
@@ -238,13 +265,13 @@ init_r1225_hotspot() {
     done
     
     if [ "$has_active_wifi" -eq 0 ]; then
-        log_message "No other active WiFi found, enabling R1225 hotspot..."
+        log_message "No other active WiFi found, enabling default hotspot ($default_ssid)..."
         uci set wireless.$r1225_section.disabled='0'
         uci commit wireless
         wifi reload
-        log_message "R1225 hotspot enabled (section: $r1225_section)"
+        log_message "Default hotspot enabled (section: $r1225_section, SSID: $default_ssid)"
     else
-        log_message "Other active WiFi detected, keeping R1225 hotspot disabled"
+        log_message "Other active WiFi detected, keeping default hotspot disabled"
     fi
 }
 
