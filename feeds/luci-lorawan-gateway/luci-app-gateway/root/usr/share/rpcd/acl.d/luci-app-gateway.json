@@ -10,6 +10,32 @@
                     "reboot_host",
                     "shutdown_host"
                 ]
+            },
+            "file": {
+                "/etc/deviceinfo/sn": [
+                    "read"
+                ],
+                "/etc/deviceinfo/eui": [
+                    "read"
+                ],
+                "/etc/deviceinfo/freq_plan": [
+                    "read"
+                ],
+                "/version.txt": [
+                    "read"
+                ],
+                "/bin/cat /etc/deviceinfo/sn": [
+                    "exec"
+                ],
+                "/bin/cat /etc/deviceinfo/eui": [
+                    "exec"
+                ],
+                "/bin/cat /etc/deviceinfo/freq_plan": [
+                    "exec"
+                ],
+                "/bin/cat /version.txt": [
+                    "exec"
+                ]
             }
         },
         "write": {
