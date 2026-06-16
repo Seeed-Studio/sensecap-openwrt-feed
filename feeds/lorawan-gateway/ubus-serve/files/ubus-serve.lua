@@ -268,16 +268,20 @@ local my_method = {
                 },
                 reboot_host = {
                         function(req, msg)
-                                os.execute("echo b > /proc/sysrq-trigger")
-                                print("Rebooting host...")
                                 conn:reply(req, {result=0})
+                                uloop.timer(function()
+                                        print("Rebooting host...")
+                                        os.execute("echo b > /proc/sysrq-trigger")
+                                end, 2000)
                         end, {}
                 },
                 shutdown_host = {
                         function(req, msg)
-                                os.execute("echo o > /proc/sysrq-trigger")
-                                print("Shutting down host...")
                                 conn:reply(req, {result=0})
+                                uloop.timer(function()
+                                        print("Shutting down host...")
+                                        os.execute("echo o > /proc/sysrq-trigger")
+                                end, 2000)
                         end, {}
                 }
         }
