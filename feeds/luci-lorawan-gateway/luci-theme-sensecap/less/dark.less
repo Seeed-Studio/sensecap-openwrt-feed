@@ -34,6 +34,23 @@ body {
     color: #cccccc;
 }
 
+/* SenseCAP dark-mode token overrides (consumed by luci-app-* inline styles) */
+:root {
+    --sensecap-log-bg: #1e1e1e;
+    --sensecap-log-fg: #cccccc;
+    --sensecap-log-border: #3c3c3c;
+    --sensecap-chart-bg: #1e1e1e;
+    --sensecap-chart-border: #252526;
+    --sensecap-muted-bg: #252526;
+    --sensecap-dropzone-border: #3c3c3c;
+    --sensecap-dropzone-hover-bg: #2a2e1a;
+    --sensecap-muted-fg: #adb5bd;
+    --sensecap-emphasis-fg: #ced4da;
+    --sensecap-divider: #3c3c3c;
+    --sensecap-neutral-btn-bg: #4a5568;
+    --sensecap-neutral-btn-bg-hover: #5a6578;
+}
+
 .spinning::before {
     filter: invert(1);
 }
