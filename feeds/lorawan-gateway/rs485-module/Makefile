@@ -18,10 +18,10 @@ define Package/rs485-module
 endef
 
 define Package/rs485-module/description
-	Bidirectional bridge between RS485 serial port and MQTT broker.
+	Bidirectional transparent bridge between RS485 serial port and MQTT broker.
 	Written in Rust with rumqttc for async MQTT communication.
-	Uplink: RS485 data wrapped in JSON {"data":"..."}.
-	Downlink: MQTT JSON {"data":"..."} converted to raw bytes.
+	Uplink: RS485 raw bytes published directly to rs485/CH<N>/uplink.
+	Downlink: payload of rs485/CH<N>/downlink written directly to /dev/RS485-<N>.
 	Reads configuration from UCI (/etc/config/rs485-module).
 endef
 
