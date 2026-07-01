@@ -125,7 +125,7 @@ return baseclass.extend({
 
         rv.appendChild(E('div', { 'class': 'cbi-section' }, [
             E('h3', _('LoRa Packets')),
-            E('div', { 'style': 'background:#fff; margin: 20px 0; border:1px solid #ddd;' }, [svg2Div])
+            E('div', { 'style': 'background:var(--sensecap-chart-bg); margin: 20px 0; border:1px solid var(--sensecap-chart-border);' }, [svg2Div])
         ]));
 
         return rv;

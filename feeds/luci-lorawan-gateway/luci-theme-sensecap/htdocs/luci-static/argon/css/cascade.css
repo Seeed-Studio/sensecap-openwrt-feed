@@ -54,6 +54,21 @@
   --blur-opacity-dark: 0.5;
   --font-family-sans-serif: "Google Sans", "Microsoft Yahei", "WenQuanYi Micro Hei", "sans-serif", "Helvetica Neue", "Helvetica", "Hiragino Sans GB";
   --dropdown-arrow-icon: url("data:image/svg+xml;charset=utf-8;base64,PHN2ZyB4bWxucz0iaHR0cDovL3d3dy53My5vcmcvMjAwMC9zdmciIHdpZHRoPSIzMiIgaGVpZ2h0PSIzMiIgdmlld0JveD0iMCAwIDI0IDI0Ij48cGF0aCBmaWxsPSJjdXJyZW50Q29sb3IiIGQ9Ik01LjI5MyA5LjI5M2ExIDEgMCAwIDEgMS40MTQgMEwxMiAxNC41ODZsNS4yOTMtNS4yOTNhMSAxIDAgMSAxIDEuNDE0IDEuNDE0bC02IDZhMSAxIDAgMCAxLTEuNDE0IDBsLTYtNmExIDEgMCAwIDEgMC0xLjQxNCIvPjwvc3ZnPg==");
+
+  /* SenseCAP tokens consumed by luci-app-* inline styles — overridden in dark.css */
+  --sensecap-log-bg: #ffffff;
+  --sensecap-log-fg: #333333;
+  --sensecap-log-border: #cccccc;
+  --sensecap-chart-bg: #ffffff;
+  --sensecap-chart-border: #dddddd;
+  --sensecap-muted-bg: #f5f5f5;
+  --sensecap-dropzone-border: #cbd5e0;
+  --sensecap-dropzone-hover-bg: #f3f8e8;
+  --sensecap-muted-fg: #6b7280;
+  --sensecap-emphasis-fg: #2d3748;
+  --sensecap-divider: #e2e8f0;
+  --sensecap-neutral-btn-bg: #8898aa;
+  --sensecap-neutral-btn-bg-hover: #6c7a8d;
 }
 /*
  *  Include base and custom css

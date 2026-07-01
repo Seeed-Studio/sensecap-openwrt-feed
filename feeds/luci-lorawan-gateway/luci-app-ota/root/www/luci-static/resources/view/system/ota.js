@@ -210,7 +210,7 @@ return view.extend({
 				var self = this;
 				ui.showModal(_('OTA Firmware Upgrade'), [
 					E('div', {}, 'Ready to download firmware from:'),
-					E('pre', { 'style': 'margin: 10px 0; padding: 5px; background: #f5f5f5; overflow-x: auto;' }, displayUrl),
+					E('pre', { 'style': 'margin: 10px 0; padding: 5px; background: var(--sensecap-muted-bg); color: var(--sensecap-log-fg); overflow-x: auto;' }, displayUrl),
 					E('div', { 'class': 'right' }, [
 						E('button', {
 							'class': 'btn',

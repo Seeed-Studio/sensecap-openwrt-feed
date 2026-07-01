@@ -46,7 +46,7 @@ return view.extend({
 		logView.renderWidget = function(section_id, option_id, cfgvalue) {
 			return E('div', {
 				'id': 'log_view',
-				'style': 'width:100%; height:600px; overflow:auto; border:1px solid #ccc; padding:5px; font-family:monospace; white-space:pre; background:#fff; color:#333; resize:vertical;'
+				'style': 'width:100%; height:600px; overflow:auto; border:1px solid var(--sensecap-log-border); padding:5px; font-family:monospace; white-space:pre; background:var(--sensecap-log-bg); color:var(--sensecap-log-fg); resize:vertical;'
 			}, _('Loading logs...'));
 		};
 

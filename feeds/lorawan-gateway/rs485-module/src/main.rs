@@ -2,7 +2,6 @@ use chrono::Local;
 use rumqttc::{AsyncClient, Event, Incoming, MqttOptions, QoS, Transport};
 use rumqttc::tokio_rustls::rustls::ClientConfig as RustlsClientConfig;
 use rustls_pemfile::{certs, pkcs8_private_keys};
-use serde::{Deserialize, Serialize};
 use std::fs::{File, OpenOptions};
 use std::io::Write;
 use std::process::Command;
@@ -74,18 +73,6 @@ struct SerialConfig {
     checkbit: Parity,
     flowcontrol: tokio_serial::FlowControl,
     timeout: Duration,
-}
-
-// RS485 -> MQTT Message Structure
-#[derive(Debug, Serialize)]
-struct UplinkMessage {
-    data: String,
-}
-
-// MQTT -> RS485 Message Structure
-#[derive(Debug, Deserialize)]
-struct DownlinkMessage {
-    data: String,
 }
 
 // Logger Structure
@@ -552,29 +539,24 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                                                         logger.log(&format!("Subscribed [MQTT->RS485] to topic: {}", config.mqtt.downlink_topic));
                                                     }
                                                     Err(e) => {
-                                                        logger.log(&format!("Failed to topic: {}", e));
+                                                        logger.log(&format!("Failed to subscribe: {}", e));
                                                     }
                                                 }
                                             }
-                                            logger.log(&format!("Published [RS485->MQTT] to topic: {}", config.mqtt.uplink_topic));
+                                            logger.log(&format!("MQTT connected, uplink ready on: {}", config.mqtt.uplink_topic));
                                         }
                                         // Handle incoming publish messages
                                         Incoming::Publish(p) => {
-                                            let payload = String::from_utf8_lossy(&p.payload);
-                                            logger.log(&format!("MQTT received: {}", payload));
-                                            
-                                            if let Ok(msg) = serde_json::from_str::<DownlinkMessage>(&payload) {
-                                                let data = msg.data.as_bytes();
-                                                match AsyncWriteExt::write_all(&mut serial_port, data).await {
-                                                    Ok(_) => {
-                                                        logger.log(&format!("Forwarded to RS485: {}", msg.data));
-                                                    }
-                                                    Err(e) => {
-                                                        logger.log(&format!("RS485 write failed: {}", e));
-                                                    }
+                                            let payload_hex = hex::encode_upper(&p.payload);
+                                            logger.log(&format!("MQTT received ({} bytes): {}", p.payload.len(), payload_hex));
+
+                                            match AsyncWriteExt::write_all(&mut serial_port, &p.payload).await {
+                                                Ok(_) => {
+                                                    logger.log(&format!("Forwarded to RS485: {}", payload_hex));
                                                 }
-                                            } else {
-                                                logger.log(&format!("Invalid message format, expected {{\"data\":\"...\"}}, got: {}", payload));
+                                                Err(e) => {
+                                                    logger.log(&format!("RS485 write failed: {}", e));
+                                                }
                                             }
                                         }
                                         // Handle subscription acknowledgment
@@ -627,24 +609,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
                         } => {
                             match serial_result {
                                 Ok((n, buffer)) if n > 0 => {
-                                    let data_str = String::from_utf8_lossy(&buffer[..n]).trim().to_string();
-                                    logger.log(&format!("RS485 received ({} bytes): {}", n, data_str));
+                                    let payload_hex = hex::encode_upper(&buffer[..n]);
+                                    logger.log(&format!("RS485 received ({} bytes): {}", n, payload_hex));
 
                                     if let Some(ref client) = mqtt_client {
-                                        let uplink_msg = UplinkMessage { data: data_str.clone() };
-                                        match serde_json::to_string(&uplink_msg) {
-                                            Ok(json) => {
-                                                match client.publish(&config.mqtt.uplink_topic, config.mqtt.qos_level, false, json.as_bytes()).await {
-                                                    Ok(_) => {
-                                                        logger.log(&format!("Published to MQTT: {}", json));
-                                                    }
-                                                    Err(e) => {
-                                                        logger.log(&format!("MQTT publish failed: {}", e));
-                                                    }
-                                                }
+                                        match client.publish(&config.mqtt.uplink_topic, config.mqtt.qos_level, false, &buffer[..n]).await {
+                                            Ok(_) => {
+                                                logger.log(&format!("Published to MQTT: {}", payload_hex));
                                             }
                                             Err(e) => {
-                                                logger.log(&format!("JSON serialization failed: {}", e));
+                                                logger.log(&format!("MQTT publish failed: {}", e));
                                             }
                                         }
                                     }
